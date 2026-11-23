@@ -10,6 +10,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
+  <!-- Markdown, Code Highlighting & Sanitization CDNs -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
   <style>
     /* ==========================================================================
        1. CSS VARIABLES (DESIGN TOKENS & THEMING)
@@ -318,7 +324,7 @@
       position: relative;
     }
 
-    /* Left Sidebar: Chat History Placeholder */
+    /* Left Sidebar: Chat History */
     .sidebar {
       width: var(--sidebar-width);
       background-color: var(--bg-surface);
@@ -420,9 +426,8 @@
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
       padding: var(--space-6) var(--space-4);
+      scroll-behavior: smooth;
     }
 
     /* Empty state & prompt cards */
@@ -434,7 +439,7 @@
       align-items: center;
       text-align: center;
       gap: var(--space-4);
-      margin: auto 0;
+      margin: auto auto;
     }
 
     .empty-hero-icon {
@@ -514,10 +519,364 @@
       overflow: hidden;
     }
 
-    /* Message Input Bar (Disabled in Phase 1) */
+    /* ==========================================================================
+       MESSAGES LIST & STREAMING BUBBLES
+       ========================================================================== */
+    .messages-container {
+      max-width: 800px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+      padding-bottom: var(--space-4);
+    }
+
+    .message-row {
+      display: flex;
+      gap: var(--space-3);
+      width: 100%;
+      animation: messageFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes messageFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message-row.user {
+      flex-direction: row-reverse;
+    }
+
+    .message-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .message-row.user .message-avatar {
+      background-color: var(--bg-surface-elevated);
+      border: 1px solid var(--border-medium);
+      color: var(--text-secondary);
+    }
+
+    .message-row.assistant .message-avatar {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(245, 80, 54, 0.35);
+    }
+
+    .message-bubble-wrapper {
+      display: flex;
+      flex-direction: column;
+      max-width: 85%;
+      min-width: 0;
+    }
+
+    .message-row.user .message-bubble-wrapper {
+      align-items: flex-end;
+    }
+
+    .message-row.assistant .message-bubble-wrapper {
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .message-bubble {
+      border-radius: var(--radius-lg);
+      font-size: 14px;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .message-row.user .message-bubble {
+      background-color: var(--bg-surface-elevated);
+      border: 1px solid var(--border-medium);
+      color: var(--text-primary);
+      padding: var(--space-3) var(--space-4);
+      border-top-right-radius: 4px;
+      white-space: pre-wrap;
+    }
+
+    .message-row.assistant .message-bubble {
+      background-color: transparent;
+      color: var(--text-primary);
+      padding: var(--space-1) 0;
+      width: 100%;
+    }
+
+    /* Markdown Rendering Styling */
+    .markdown-body {
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--text-primary);
+      width: 100%;
+    }
+
+    .markdown-body p {
+      margin-top: 0;
+      margin-bottom: var(--space-3);
+    }
+
+    .markdown-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-top: var(--space-4);
+      margin-bottom: var(--space-2);
+      line-height: 1.3;
+    }
+
+    .markdown-body h1:first-child, .markdown-body h2:first-child, .markdown-body h3:first-child {
+      margin-top: 0;
+    }
+
+    .markdown-body h1 { font-size: 1.4em; }
+    .markdown-body h2 { font-size: 1.25em; }
+    .markdown-body h3 { font-size: 1.1em; }
+
+    .markdown-body ul, .markdown-body ol {
+      padding-left: var(--space-5);
+      margin-bottom: var(--space-3);
+    }
+
+    .markdown-body li {
+      margin-bottom: var(--space-1);
+    }
+
+    .markdown-body li > p {
+      margin-bottom: var(--space-1);
+    }
+
+    .markdown-body blockquote {
+      border-left: 3px solid var(--accent);
+      padding-left: var(--space-3);
+      margin: var(--space-3) 0;
+      color: var(--text-secondary);
+    }
+
+    .markdown-body code:not(.hljs) {
+      font-family: var(--font-code);
+      font-size: 12.5px;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--accent);
+    }
+
+    .markdown-body table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: var(--space-3) 0;
+      font-size: 13px;
+    }
+
+    .markdown-body th, .markdown-body td {
+      border: 1px solid var(--border-medium);
+      padding: var(--space-2) var(--space-3);
+      text-align: left;
+    }
+
+    .markdown-body th {
+      background-color: var(--bg-surface-elevated);
+      font-weight: 600;
+    }
+
+    /* Code Block Containers & Copy Buttons */
+    .code-block-wrapper {
+      margin: var(--space-3) 0;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      background-color: #111827;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .code-block-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px var(--space-3);
+      background-color: #1f2937;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 11px;
+      color: #9ca3af;
+      font-family: var(--font-code);
+    }
+
+    .code-copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      color: #d1d5db;
+      font-size: 11px;
+      padding: 2px 8px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .code-copy-btn:hover {
+      background-color: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+    }
+
+    .code-copy-btn.copied {
+      color: var(--status-valid);
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+
+    .code-block-wrapper pre {
+      margin: 0;
+      padding: var(--space-3);
+      overflow-x: auto;
+      font-family: var(--font-code);
+      font-size: 13px;
+      line-height: 1.5;
+      color: #f3f4f6;
+    }
+
+    /* Typing Indicator (3 Bouncing Dots) */
+    .typing-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 14px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      width: fit-content;
+    }
+
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: var(--accent);
+      animation: typingBounce 1.4s infinite ease-in-out both;
+    }
+
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes typingBounce {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Stop Generating Button (Floating Pill) */
+    .chat-stop-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: var(--space-2);
+    }
+
+    .stop-gen-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      background-color: var(--bg-surface-elevated);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-full);
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition);
+    }
+
+    .stop-gen-btn:hover {
+      background-color: var(--bg-surface-subtle);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Inline Error Card */
+    .inline-error-card {
+      background-color: var(--status-error-bg);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: var(--radius-md);
+      padding: var(--space-3) var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      font-size: 13px;
+      color: var(--text-primary);
+      width: 100%;
+    }
+
+    .inline-error-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      color: var(--status-error);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .inline-error-message {
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .inline-error-actions {
+      display: flex;
+      gap: var(--space-2);
+      margin-top: var(--space-1);
+    }
+
+    .btn-retry {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      background-color: var(--bg-surface-elevated);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-sm);
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .btn-retry:hover {
+      background-color: var(--bg-surface-subtle);
+      border-color: var(--accent);
+    }
+
+    /* Generation Stopped Notice */
+    .generation-stopped-notice {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: var(--space-2);
+    }
+
+    /* Message Input Bar */
     .chat-input-container {
-      padding: var(--space-4);
-      max-width: 760px;
+      padding: var(--space-3) var(--space-4) var(--space-4);
+      max-width: 800px;
       width: 100%;
       margin: 0 auto;
       flex-shrink: 0;
@@ -525,15 +884,19 @@
 
     .chat-input-box {
       background-color: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
+      border: 1px solid var(--border-medium);
       border-radius: var(--radius-lg);
       padding: var(--space-3) var(--space-4);
       display: flex;
       flex-direction: column;
       gap: var(--space-2);
       box-shadow: var(--shadow-md);
-      opacity: 0.75;
-      cursor: not-allowed;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .chat-input-box:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--border-focus), var(--shadow-md);
     }
 
     .chat-textarea {
@@ -544,8 +907,11 @@
       outline: none;
       color: var(--text-primary);
       font-size: 14px;
-      height: 48px;
-      cursor: not-allowed;
+      min-height: 24px;
+      max-height: 180px;
+      height: 24px;
+      line-height: 1.5;
+      font-family: inherit;
     }
 
     .chat-textarea::placeholder {
@@ -560,26 +926,36 @@
       padding-top: var(--space-2);
     }
 
-    .input-pill {
+    .input-hint {
       font-size: 11px;
       color: var(--text-muted);
       font-family: var(--font-code);
-      background: var(--bg-surface-elevated);
-      padding: 2px 8px;
-      border-radius: var(--radius-sm);
+      user-select: none;
     }
 
     .send-btn {
       width: 32px;
       height: 32px;
       border-radius: var(--radius-md);
-      background-color: var(--bg-surface-subtle);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-muted);
+      background-color: var(--accent);
+      border: none;
+      color: #ffffff;
       display: flex;
       align-items: center;
       justify-content: center;
+      cursor: pointer;
+      transition: background-color var(--transition), opacity var(--transition);
+    }
+
+    .send-btn:hover:not(:disabled) {
+      background-color: var(--accent-hover);
+    }
+
+    .send-btn:disabled {
+      background-color: var(--bg-surface-subtle);
+      color: var(--text-muted);
       cursor: not-allowed;
+      opacity: 0.5;
     }
 
     .chat-disclaimer {
@@ -1083,6 +1459,9 @@
       .modal-card {
         margin: var(--space-2);
       }
+      .message-bubble-wrapper {
+        max-width: 92%;
+      }
     }
   </style>
 </head>
@@ -1112,7 +1491,7 @@
         </div>
 
         <!-- Model Badge Placeholder -->
-        <div class="model-badge-placeholder" title="Current Model Placeholder">
+        <div class="model-badge-placeholder" title="Current Model">
           <span class="badge-icon"></span>
           <span id="currentModelLabel">llama-3.3-70b-versatile</span>
         </div>
@@ -1174,7 +1553,7 @@
       <!-- Backdrop for mobile drawers -->
       <div id="drawerBackdrop" class="drawer-backdrop"></div>
 
-      <!-- LEFT SIDEBAR (CHAT HISTORY PLACEHOLDER) -->
+      <!-- LEFT SIDEBAR (CHAT HISTORY) -->
       <aside id="leftSidebar" class="sidebar">
         <div class="sidebar-header">
           <button class="new-chat-btn" id="newChatBtn" title="Start New Conversation">
@@ -1192,20 +1571,21 @@
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
-            <p><strong>No saved chats</strong><br>Conversations will appear here as you chat.</p>
+            <p><strong>Active Session</strong><br>Multi-turn history is active. Click "+ New Chat" to clear.</p>
           </div>
         </div>
 
         <div class="sidebar-footer">
           <span>Groq LPU™ Engine</span>
-          <span style="color: var(--accent); font-weight: 500;">v0.1</span>
+          <span style="color: var(--accent); font-weight: 500;">Phase 2</span>
         </div>
       </aside>
 
       <!-- CENTER CHAT AREA -->
       <main class="chat-main">
-        <div class="chat-scroll-area">
-          <div class="empty-state">
+        <div class="chat-scroll-area" id="chatScrollArea">
+          <!-- Empty State with 3 Clickable Example Prompt Cards -->
+          <div class="empty-state" id="emptyState">
             <div class="empty-hero-icon" aria-hidden="true">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
@@ -1214,10 +1594,9 @@
             
             <h1 class="empty-title">Ultra-fast Groq Playground</h1>
             <p class="empty-subtitle">
-              Experience near-instant LLM generation powered by Groq's Language Processing Units. Connect your API key to get started.
+              Experience near-instant LLM generation powered by Groq's Language Processing Units. Connect your API key and pick a prompt below to start streaming.
             </p>
 
-            <!-- 3 Clickable Example Prompt Cards -->
             <div class="prompt-cards-grid">
               <button class="prompt-card" data-prompt="Explain quantum computing and qubit superposition using a simple analogy for a high school student.">
                 <span class="prompt-card-icon">⚡</span>
@@ -1238,15 +1617,28 @@
               </button>
             </div>
           </div>
+
+          <!-- Messages Stream Container -->
+          <div class="messages-container" id="messagesContainer" style="display: none;"></div>
         </div>
 
-        <!-- Bottom message input bar (Disabled for Phase 1) -->
+        <!-- Bottom message input bar -->
         <div class="chat-input-container">
-          <div class="chat-input-box" title="Input disabled in Phase 1">
-            <textarea id="messageInput" class="chat-textarea" placeholder="Type a message... (Disabled in Phase 1)" disabled></textarea>
+          <!-- Floating Stop Generating button -->
+          <div class="chat-stop-container" id="chatStopContainer" style="display: none;">
+            <button id="stopGenBtn" class="stop-gen-btn" title="Stop current response generation">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+              </svg>
+              <span>Stop generating</span>
+            </button>
+          </div>
+
+          <div class="chat-input-box" id="chatInputBox">
+            <textarea id="messageInput" class="chat-textarea" placeholder="Type a message... (Enter to send, Shift+Enter for newline)" rows="1"></textarea>
             <div class="chat-input-actions">
-              <span class="input-pill">Phase 1 • Scaffold Mode</span>
-              <button class="send-btn" disabled title="Send disabled in Phase 1">
+              <span class="input-hint">Enter to send • Shift+Enter for new line</span>
+              <button id="sendBtn" class="send-btn" disabled title="Send message" aria-label="Send message">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="22" y1="2" x2="11" y2="13"></line>
                   <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -1254,7 +1646,7 @@
               </button>
             </div>
           </div>
-          <p class="chat-disclaimer">Groq Playground Phase 1 • API Key validation &amp; layout foundation</p>
+          <p class="chat-disclaimer">Groq Playground • Powered by llama-3.3-70b-versatile on Groq LPUs</p>
         </div>
       </main>
 
@@ -1274,9 +1666,9 @@
           <div class="setting-item">
             <div class="setting-label-row">
               <span>Model</span>
-              <span>Default</span>
+              <span>Active</span>
             </div>
-            <div class="setting-control-placeholder">llama-3.3-70b-versatile</div>
+            <div class="setting-control-placeholder" style="color: var(--text-primary); font-family: var(--font-code);">llama-3.3-70b-versatile</div>
           </div>
 
           <div class="setting-item">
@@ -1310,7 +1702,7 @@
 
           <div class="settings-placeholder-box">
             <strong>Parameter Configuration</strong><br>
-            Sliders, model switching, and system instructions will become interactive in Phase 2.
+            Dynamic model switching and custom temperature sliders will be unlocked in the next phase.
           </div>
         </div>
       </aside>
@@ -1410,17 +1802,20 @@
 
   <!-- ==========================================================================
        6. JAVASCRIPT LOGIC
-       - State
+       - Constants & State
        - Storage
-       - API
-       - UI
+       - API (Model validation & Streaming completions)
+       - UI (DOM handling, markdown rendering, error handling, events)
        - Initialization
-       ========================================================================== -->
+       ========================================================================== */
   <script>
     /* --------------------------------------------------------------------------
-       STATE
-       Centralized application state
+       CONSTANTS & STATE
        -------------------------------------------------------------------------- */
+    const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
+    const STORAGE_KEY = 'groq_api_key';
+    const THEME_KEY = 'groq_theme';
+
     const state = {
       apiKey: null,
       isKeyValid: false,
@@ -1428,16 +1823,16 @@
       theme: 'dark',
       isSidebarOpen: false,
       isSettingsOpen: false,
-      isKeyModalOpen: false
+      isKeyModalOpen: false,
+      isGenerating: false,
+      abortController: null,
+      messages: [] // Full multi-turn conversation: Array<{ role: 'user' | 'assistant', content: string }>
     };
 
     /* --------------------------------------------------------------------------
        STORAGE
-       Secure browser storage handling (localStorage vs sessionStorage)
+       Browser storage helpers for API Key & Theme selection
        -------------------------------------------------------------------------- */
-    const STORAGE_KEY = 'groq_api_key';
-    const THEME_KEY = 'groq_theme';
-
     const storage = {
       getKey() {
         try {
@@ -1449,9 +1844,7 @@
           if (sessionVal) {
             return { key: sessionVal, type: 'session' };
           }
-        } catch (e) {
-          // Storage might be restricted
-        }
+        } catch (_) {}
         return { key: null, type: 'local' };
       },
 
@@ -1464,24 +1857,20 @@
             sessionStorage.setItem(STORAGE_KEY, key);
             localStorage.removeItem(STORAGE_KEY);
           }
-        } catch (e) {
-          // Fallback or handle storage quota error silently
-        }
+        } catch (_) {}
       },
 
       removeKey() {
         try {
           localStorage.removeItem(STORAGE_KEY);
           sessionStorage.removeItem(STORAGE_KEY);
-        } catch (e) {
-          // Ignore
-        }
+        } catch (_) {}
       },
 
       getTheme() {
         try {
           return localStorage.getItem(THEME_KEY);
-        } catch (e) {
+        } catch (_) {
           return null;
         }
       },
@@ -1489,18 +1878,17 @@
       saveTheme(theme) {
         try {
           localStorage.setItem(THEME_KEY, theme);
-        } catch (e) {
-          // Ignore
-        }
+        } catch (_) {}
       }
     };
 
     /* --------------------------------------------------------------------------
        API
-       Groq API endpoints & network calls.
-       IMPORTANT: Keys are never logged to console or sent anywhere else.
+       Groq API network operations.
+       SECURITY: API keys are NEVER logged or transmitted anywhere except api.groq.com.
        -------------------------------------------------------------------------- */
     const api = {
+      // Validate key against /openai/v1/models
       async validateKey(candidateKey) {
         const trimmed = (candidateKey || '').trim();
         if (!trimmed) {
@@ -1536,18 +1924,103 @@
         } catch (err) {
           return {
             success: false,
-            error: err.message || 'Unable to connect to api.groq.com. Please check your internet connection.'
+            error: err.message || 'Unable to connect to api.groq.com. Please check your network.'
           };
         }
+      },
+
+      // Stream Chat Completion via SSE
+      async streamChatCompletion(messages, onChunk, signal) {
+        const payload = {
+          model: DEFAULT_MODEL,
+          messages: messages.map(m => ({ role: m.role, content: m.content })),
+          stream: true
+        };
+
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${state.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload),
+          signal: signal
+        });
+
+        if (!response.ok) {
+          const status = response.status;
+          const retryAfter = response.headers.get('retry-after');
+          let parsedError = null;
+
+          try {
+            const errJson = await response.json();
+            if (errJson && errJson.error) {
+              parsedError = errJson.error.message;
+            }
+          } catch (_) {}
+
+          return {
+            success: false,
+            status: status,
+            retryAfter: retryAfter,
+            error: parsedError || response.statusText
+          };
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // Retain unfinished line in buffer
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith(':')) continue; // Skip comments/keep-alive
+
+            if (trimmed === 'data: [DONE]') {
+              return { success: true };
+            }
+
+            if (trimmed.startsWith('data: ')) {
+              try {
+                const json = JSON.parse(trimmed.slice(6));
+                const delta = json.choices?.[0]?.delta?.content || '';
+                if (delta) {
+                  onChunk(delta);
+                }
+              } catch (_) {
+                // Incomplete JSON fragment, continue streaming
+              }
+            }
+          }
+        }
+
+        // Flush any remaining line
+        if (buffer.trim().startsWith('data: ') && buffer.trim() !== 'data: [DONE]') {
+          try {
+            const json = JSON.parse(buffer.trim().slice(6));
+            const delta = json.choices?.[0]?.delta?.content || '';
+            if (delta) onChunk(delta);
+          } catch (_) {}
+        }
+
+        return { success: true };
       }
     };
 
     /* --------------------------------------------------------------------------
        UI
-       DOM interaction, rendering, modals, theme toggling, drawer behaviors
+       DOM interaction, Markdown parsing with marked.js, DOMPurify & highlight.js
        -------------------------------------------------------------------------- */
     const ui = {
       elements: {},
+      _userScrolledUp: false,
 
       cacheElements() {
         this.elements = {
@@ -1581,12 +2054,71 @@
           closeSettingsBtn: document.getElementById('closeSettingsBtn'),
           rightSettings: document.getElementById('rightSettings'),
           drawerBackdrop: document.getElementById('drawerBackdrop'),
-          // Example cards & inputs
+          newChatBtn: document.getElementById('newChatBtn'),
+          // Chat area & inputs
+          chatScrollArea: document.getElementById('chatScrollArea'),
+          emptyState: document.getElementById('emptyState'),
+          messagesContainer: document.getElementById('messagesContainer'),
           promptCards: document.querySelectorAll('.prompt-card'),
+          chatInputBox: document.getElementById('chatInputBox'),
           messageInput: document.getElementById('messageInput'),
+          sendBtn: document.getElementById('sendBtn'),
+          chatStopContainer: document.getElementById('chatStopContainer'),
+          stopGenBtn: document.getElementById('stopGenBtn'),
           toast: document.getElementById('toast'),
           toastMessage: document.getElementById('toastMessage')
         };
+      },
+
+      initMarkdown() {
+        // Configure marked.js with highlight.js syntax coloring & custom code block renderer
+        marked.setOptions({
+          gfm: true,
+          breaks: true,
+          silent: true
+        });
+
+        const renderer = new marked.Renderer();
+        renderer.code = function(code, lang) {
+          const language = (lang && hljs.getLanguage(lang)) ? lang : '';
+          let highlighted = '';
+          try {
+            highlighted = language ? hljs.highlight(code, { language }).value : hljs.highlightAuto(code).value;
+          } catch (_) {
+            highlighted = DOMPurify.sanitize(code);
+          }
+          const displayLang = language || (lang ? lang.toLowerCase() : 'code');
+
+          return `
+            <div class="code-block-wrapper">
+              <div class="code-block-header">
+                <span class="code-block-lang">${displayLang}</span>
+                <button type="button" class="code-copy-btn" title="Copy code">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span class="copy-text">Copy</span>
+                </button>
+              </div>
+              <pre><code class="hljs ${language}">${highlighted}</code></pre>
+            </div>
+          `;
+        };
+
+        marked.use({ renderer });
+      },
+
+      renderMarkdownToHtml(markdownText) {
+        if (!markdownText) return '';
+        try {
+          const rawHtml = marked.parse(markdownText);
+          return DOMPurify.sanitize(rawHtml, {
+            ADD_ATTR: ['target', 'rel']
+          });
+        } catch (_) {
+          return DOMPurify.sanitize(markdownText);
+        }
       },
 
       initTheme() {
@@ -1632,12 +2164,15 @@
           this.elements.keyStatusLabel.textContent = 'Key Connected';
           this.elements.quickRemoveKeyBtn.style.display = 'inline-flex';
           this.elements.modalRemoveKeyBtn.style.display = 'inline-flex';
+          this.elements.messageInput.placeholder = 'Type a message... (Enter to send, Shift+Enter for newline)';
         } else {
           this.elements.keyStatusDot.className = 'key-dot none';
           this.elements.keyStatusLabel.textContent = 'No API Key';
           this.elements.quickRemoveKeyBtn.style.display = 'none';
           this.elements.modalRemoveKeyBtn.style.display = 'none';
+          this.elements.messageInput.placeholder = 'Connect a Groq API key above to start chatting...';
         }
+        this.updateSendButtonState();
       },
 
       openModal() {
@@ -1723,8 +2258,380 @@
         this.elements.drawerBackdrop.classList.toggle('active', shouldShow);
       },
 
+      // Auto-grow textarea height
+      adjustTextareaHeight() {
+        const textarea = this.elements.messageInput;
+        textarea.style.height = 'auto';
+        const newHeight = Math.min(textarea.scrollHeight, 180);
+        textarea.style.height = (newHeight > 24 ? newHeight : 24) + 'px';
+      },
+
+      updateSendButtonState() {
+        const hasKey = !!state.apiKey;
+        const hasText = this.elements.messageInput.value.trim().length > 0;
+        const isGenerating = state.isGenerating;
+
+        if (isGenerating) {
+          this.elements.sendBtn.disabled = true;
+          this.elements.chatStopContainer.style.display = 'flex';
+        } else {
+          this.elements.chatStopContainer.style.display = 'none';
+          this.elements.sendBtn.disabled = !hasKey || !hasText;
+        }
+      },
+
+      // Auto-scroll tracking
+      initScrollTracking() {
+        const scrollArea = this.elements.chatScrollArea;
+        scrollArea.addEventListener('scroll', () => {
+          const threshold = 70;
+          const distanceFromBottom = scrollArea.scrollHeight - scrollArea.scrollTop - scrollArea.clientHeight;
+          this._userScrolledUp = distanceFromBottom > threshold;
+        });
+      },
+
+      scrollToBottomIfNeeded() {
+        if (!this._userScrolledUp) {
+          const scrollArea = this.elements.chatScrollArea;
+          scrollArea.scrollTop = scrollArea.scrollHeight;
+        }
+      },
+
+      forceScrollToBottom() {
+        this._userScrolledUp = false;
+        const scrollArea = this.elements.chatScrollArea;
+        scrollArea.scrollTop = scrollArea.scrollHeight;
+      },
+
+      // Append user bubble to DOM
+      appendUserMessage(text) {
+        this.elements.emptyState.style.display = 'none';
+        this.elements.messagesContainer.style.display = 'flex';
+
+        const row = document.createElement('div');
+        row.className = 'message-row user';
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.innerHTML = `
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        `;
+
+        const bubbleWrapper = document.createElement('div');
+        bubbleWrapper.className = 'message-bubble-wrapper';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        bubble.textContent = text;
+
+        bubbleWrapper.appendChild(bubble);
+        row.appendChild(avatar);
+        row.appendChild(bubbleWrapper);
+
+        this.elements.messagesContainer.appendChild(row);
+        this.forceScrollToBottom();
+      },
+
+      // Create assistant bubble placeholder with typing indicator
+      createAssistantPlaceholder() {
+        const row = document.createElement('div');
+        row.className = 'message-row assistant';
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.innerHTML = `
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        `;
+
+        const bubbleWrapper = document.createElement('div');
+        bubbleWrapper.className = 'message-bubble-wrapper';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+
+        // Typing indicator
+        const typingIndicator = document.createElement('div');
+        typingIndicator.className = 'typing-indicator';
+        typingIndicator.innerHTML = `
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+        `;
+
+        // Markdown content container
+        const markdownBody = document.createElement('div');
+        markdownBody.className = 'markdown-body';
+        markdownBody.style.display = 'none';
+
+        bubble.appendChild(typingIndicator);
+        bubble.appendChild(markdownBody);
+        bubbleWrapper.appendChild(bubble);
+        row.appendChild(avatar);
+        row.appendChild(bubbleWrapper);
+
+        this.elements.messagesContainer.appendChild(row);
+        this.forceScrollToBottom();
+
+        return {
+          rowElement: row,
+          typingIndicator: typingIndicator,
+          markdownBody: markdownBody,
+          bubbleWrapper: bubbleWrapper
+        };
+      },
+
+      // Render friendly inline error inside the assistant response
+      renderInlineError(bubbleWrapper, status, errorText, retryAfter = null) {
+        let title = 'Error';
+        let friendlyMsg = errorText || 'An unexpected error occurred.';
+        let canRetry = true;
+        let isAuthError = false;
+        let isContextError = false;
+
+        switch (status) {
+          case 401:
+            title = '401 Unauthorized';
+            friendlyMsg = 'Your Groq API key is invalid or has expired. Please check or re-enter your key.';
+            canRetry = false;
+            isAuthError = true;
+            break;
+          case 403:
+            title = '403 Forbidden';
+            friendlyMsg = 'You do not have permission to access model llama-3.3-70b-versatile or your account is restricted.';
+            canRetry = false;
+            break;
+          case 404:
+            title = '404 Not Found';
+            friendlyMsg = 'The requested model or API endpoint could not be found.';
+            canRetry = false;
+            break;
+          case 413:
+            title = '413 Context Limit Exceeded';
+            friendlyMsg = 'The multi-turn conversation length exceeds the model limit. Please start a new chat to continue.';
+            canRetry = false;
+            isContextError = true;
+            break;
+          case 429:
+            title = '429 Rate Limit Exceeded';
+            const waitTime = retryAfter ? ` Retry after ${retryAfter}s.` : '';
+            friendlyMsg = `Groq inference rate limit reached for this API key.${waitTime}`;
+            canRetry = true;
+            break;
+          default:
+            if (status >= 500) {
+              title = `${status} Groq Server Error`;
+              friendlyMsg = 'Groq servers encountered a temporary issue. Please try again shortly.';
+              canRetry = true;
+            } else if (status === 0) {
+              title = 'Network Connection Error';
+              friendlyMsg = 'Unable to reach api.groq.com. Please check your internet connection.';
+              canRetry = true;
+            }
+        }
+
+        const errorCard = document.createElement('div');
+        errorCard.className = 'inline-error-card';
+        errorCard.innerHTML = `
+          <div class="inline-error-header">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span>${DOMPurify.sanitize(title)}</span>
+          </div>
+          <p class="inline-error-message">${DOMPurify.sanitize(friendlyMsg)}</p>
+          <div class="inline-error-actions">
+            ${canRetry ? `
+              <button type="button" class="btn-retry retry-btn-action">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="1 4 1 10 7 10"></polyline>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                </svg>
+                <span>Retry</span>
+              </button>
+            ` : ''}
+            ${isAuthError ? `
+              <button type="button" class="btn-retry auth-btn-action">Update API Key</button>
+            ` : ''}
+            ${isContextError ? `
+              <button type="button" class="btn-retry newchat-btn-action">New Chat</button>
+            ` : ''}
+          </div>
+        `;
+
+        // Attach event handlers
+        const retryBtn = errorCard.querySelector('.retry-btn-action');
+        if (retryBtn) {
+          retryBtn.addEventListener('click', () => {
+            errorCard.remove();
+            this.retryLastMessage();
+          });
+        }
+
+        const authBtn = errorCard.querySelector('.auth-btn-action');
+        if (authBtn) {
+          authBtn.addEventListener('click', () => {
+            this.openModal();
+          });
+        }
+
+        const newChatBtn = errorCard.querySelector('.newchat-btn-action');
+        if (newChatBtn) {
+          newChatBtn.addEventListener('click', () => {
+            this.newChatAction();
+          });
+        }
+
+        bubbleWrapper.appendChild(errorCard);
+        this.scrollToBottomIfNeeded();
+      },
+
+      // Append generation stopped notice
+      renderStoppedNotice(bubbleWrapper) {
+        const notice = document.createElement('div');
+        notice.className = 'generation-stopped-notice';
+        notice.innerHTML = `
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          </svg>
+          <span>Generation stopped</span>
+        `;
+        bubbleWrapper.appendChild(notice);
+        this.scrollToBottomIfNeeded();
+      },
+
+      // Core: Send user message and stream assistant response
+      async sendMessageAction(customText = null) {
+        if (state.isGenerating) return;
+
+        const text = (customText !== null ? customText : this.elements.messageInput.value).trim();
+        if (!text) return;
+
+        if (!state.apiKey) {
+          this.openModal();
+          this.showToast('Please connect your Groq API key to begin chatting.');
+          return;
+        }
+
+        // 1. Append user message to state and DOM
+        state.messages.push({ role: 'user', content: text });
+        this.appendUserMessage(text);
+
+        // 2. Clear input
+        this.elements.messageInput.value = '';
+        this.adjustTextareaHeight();
+
+        // 3. Setup assistant placeholder with typing indicator
+        const assistantPlaceholder = this.createAssistantPlaceholder();
+        let assistantContent = '';
+        let hasReceivedFirstChunk = false;
+
+        state.isGenerating = true;
+        this.updateSendButtonState();
+        state.abortController = new AbortController();
+
+        try {
+          const result = await api.streamChatCompletion(
+            state.messages,
+            (chunk) => {
+              if (!hasReceivedFirstChunk) {
+                hasReceivedFirstChunk = true;
+                assistantPlaceholder.typingIndicator.style.display = 'none';
+                assistantPlaceholder.markdownBody.style.display = 'block';
+              }
+              assistantContent += chunk;
+              assistantPlaceholder.markdownBody.innerHTML = this.renderMarkdownToHtml(assistantContent);
+              this.scrollToBottomIfNeeded();
+            },
+            state.abortController.signal
+          );
+
+          if (!result.success) {
+            assistantPlaceholder.typingIndicator.style.display = 'none';
+            this.renderInlineError(
+              assistantPlaceholder.bubbleWrapper,
+              result.status,
+              result.error,
+              result.retryAfter
+            );
+          } else {
+            // Success: record full assistant message in state
+            state.messages.push({ role: 'assistant', content: assistantContent });
+          }
+        } catch (err) {
+          assistantPlaceholder.typingIndicator.style.display = 'none';
+          if (err.name === 'AbortError') {
+            if (assistantContent.trim()) {
+              state.messages.push({ role: 'assistant', content: assistantContent });
+            }
+            this.renderStoppedNotice(assistantPlaceholder.bubbleWrapper);
+          } else {
+            this.renderInlineError(
+              assistantPlaceholder.bubbleWrapper,
+              0,
+              err.message || 'Network connection failed.'
+            );
+          }
+        } finally {
+          state.isGenerating = false;
+          state.abortController = null;
+          this.updateSendButtonState();
+        }
+      },
+
+      // Stop generating action
+      stopGeneratingAction() {
+        if (state.isGenerating && state.abortController) {
+          state.abortController.abort();
+        }
+      },
+
+      // Retry the last message in the history
+      retryLastMessage() {
+        if (state.isGenerating) return;
+
+        // Find last user message
+        const lastUserMsg = [...state.messages].reverse().find(m => m.role === 'user');
+        if (!lastUserMsg) return;
+
+        // Pop last message(s) if needed to resend cleanly
+        if (state.messages.length > 0 && state.messages[state.messages.length - 1].role === 'assistant') {
+          state.messages.pop();
+        }
+        if (state.messages.length > 0 && state.messages[state.messages.length - 1].role === 'user') {
+          state.messages.pop();
+        }
+
+        this.sendMessageAction(lastUserMsg.content);
+      },
+
+      // Clear chat & start a new one
+      newChatAction() {
+        if (state.isGenerating && state.abortController) {
+          state.abortController.abort();
+        }
+        state.messages = [];
+        state.isGenerating = false;
+        state.abortController = null;
+
+        this.elements.messagesContainer.innerHTML = '';
+        this.elements.messagesContainer.style.display = 'none';
+        this.elements.emptyState.style.display = 'flex';
+        this.elements.messageInput.value = '';
+        this.adjustTextareaHeight();
+        this.updateSendButtonState();
+        this.closeAllDrawers();
+        this.showToast('Started new conversation');
+      },
+
       bindEvents() {
-        // Theme
+        // Theme Toggle
         this.elements.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
 
         // Key Status Button opens modal
@@ -1756,7 +2663,7 @@
           await this.validateAndSaveAction();
         });
 
-        // Enter key in input validates
+        // Enter key in API modal input
         this.elements.apiKeyInput.addEventListener('keydown', async (e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
@@ -1770,13 +2677,75 @@
           this.closeModal();
         });
 
-        // Example Prompt Cards
+        // Input textarea auto-grow & typing
+        this.elements.messageInput.addEventListener('input', () => {
+          this.adjustTextareaHeight();
+          this.updateSendButtonState();
+        });
+
+        // Enter to send, Shift+Enter for new line
+        this.elements.messageInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            this.sendMessageAction();
+          }
+        });
+
+        // Send Button Click
+        this.elements.sendBtn.addEventListener('click', () => {
+          this.sendMessageAction();
+        });
+
+        // Stop Generating Button Click
+        this.elements.stopGenBtn.addEventListener('click', () => {
+          this.stopGeneratingAction();
+        });
+
+        // New Chat Button Click
+        this.elements.newChatBtn.addEventListener('click', () => {
+          this.newChatAction();
+        });
+
+        // Example Prompt Cards: fill and immediately send
         this.elements.promptCards.forEach(card => {
           card.addEventListener('click', () => {
             const promptText = card.getAttribute('data-prompt');
             this.elements.messageInput.value = promptText;
-            this.showToast('Example prompt loaded. Chat execution activates in Phase 2.');
+            this.adjustTextareaHeight();
+            this.updateSendButtonState();
+            
+            if (!state.apiKey) {
+              this.openModal();
+              this.showToast('Please validate your Groq API key first.');
+              return;
+            }
+            
+            this.sendMessageAction();
           });
+        });
+
+        // Copy button event delegation on messagesContainer
+        this.elements.messagesContainer.addEventListener('click', (e) => {
+          const copyBtn = e.target.closest('.code-copy-btn');
+          if (copyBtn) {
+            const wrapper = copyBtn.closest('.code-block-wrapper');
+            const codeEl = wrapper ? wrapper.querySelector('pre code') : null;
+            if (codeEl) {
+              const codeText = codeEl.textContent;
+              navigator.clipboard.writeText(codeText).then(() => {
+                const textSpan = copyBtn.querySelector('.copy-text');
+                const origText = textSpan ? textSpan.textContent : 'Copy';
+                if (textSpan) textSpan.textContent = 'Copied!';
+                copyBtn.classList.add('copied');
+                setTimeout(() => {
+                  if (textSpan) textSpan.textContent = origText;
+                  copyBtn.classList.remove('copied');
+                }, 2000);
+              }).catch(() => {
+                this.showToast('Could not copy code to clipboard.');
+              });
+            }
+          }
         });
 
         // Drawers
@@ -1836,11 +2805,12 @@
 
     /* --------------------------------------------------------------------------
        INITIALIZATION
-       App startup: load theme, inspect existing key, show modal if first visit
        -------------------------------------------------------------------------- */
     async function init() {
       ui.cacheElements();
+      ui.initMarkdown();
       ui.initTheme();
+      ui.initScrollTracking();
       ui.bindEvents();
 
       // Check stored key
@@ -1852,12 +2822,11 @@
         ui.elements.apiKeyInput.value = stored.key;
         ui.updateKeyStatus(true);
 
-        // Silent background validation to confirm validity without modal interruption
+        // Background verification
         api.validateKey(stored.key).then(res => {
           ui.updateKeyStatus(res.success);
         });
       } else {
-        // First load with no key: prompt user with the BYOK modal
         ui.updateKeyStatus(false);
         ui.openModal();
       }
