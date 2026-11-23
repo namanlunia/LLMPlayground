@@ -77,7 +77,7 @@
       /* Dimensions */
       --topbar-height: 56px;
       --sidebar-width: 260px;
-      --settings-width: 300px;
+      --settings-width: 320px;
       --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -217,8 +217,8 @@
     .model-badge-placeholder {
       display: inline-flex;
       align-items: center;
-      gap: var(--space-1);
-      padding: 3px var(--space-2);
+      gap: var(--space-2);
+      padding: 3px var(--space-3);
       background-color: var(--bg-surface-elevated);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-full);
@@ -226,6 +226,14 @@
       color: var(--text-secondary);
       font-family: var(--font-code);
       user-select: none;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .model-badge-placeholder:hover {
+      border-color: var(--border-medium);
+      color: var(--text-primary);
+      background-color: var(--bg-surface-subtle);
     }
 
     .badge-icon {
@@ -965,7 +973,9 @@
       margin-top: var(--space-2);
     }
 
-    /* Right Settings Panel (Collapsible) */
+    /* ==========================================================================
+       RIGHT SETTINGS PANEL (CONTROLS & PARAMETERS)
+       ========================================================================== */
     .settings-panel {
       width: var(--settings-width);
       background-color: var(--bg-surface);
@@ -990,6 +1000,7 @@
       border-bottom: 1px solid var(--border-subtle);
       font-weight: 600;
       font-size: 14px;
+      flex-shrink: 0;
     }
 
     .settings-body {
@@ -998,59 +1009,382 @@
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: var(--space-5);
+      gap: var(--space-4);
     }
 
+    /* Presets Toolbar */
+    .presets-toolbar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding-bottom: var(--space-3);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .preset-select {
+      flex: 1;
+      height: 32px;
+      background-color: var(--bg-surface-elevated);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 12px;
+      padding: 0 var(--space-2);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .btn-preset-action {
+      height: 32px;
+      padding: 0 var(--space-2);
+      background-color: var(--bg-surface-elevated);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+    }
+
+    .btn-preset-action:hover {
+      background-color: var(--bg-surface-subtle);
+      color: var(--text-primary);
+      border-color: var(--accent);
+    }
+
+    /* Setting item and control styles */
     .setting-item {
       display: flex;
       flex-direction: column;
-      gap: var(--space-2);
+      gap: var(--space-1);
     }
 
     .setting-label-row {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       font-size: 12px;
       color: var(--text-secondary);
       font-weight: 500;
     }
 
-    .setting-control-placeholder {
+    .setting-label-left {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+
+    /* Pure CSS Tooltip */
+    .info-tooltip {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      cursor: help;
+      transition: color var(--transition);
+    }
+
+    .info-tooltip:hover {
+      color: var(--accent);
+    }
+
+    .info-tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      right: -8px;
       background-color: var(--bg-surface-elevated);
+      border: 1px solid var(--border-medium);
+      box-shadow: var(--shadow-lg);
+      color: var(--text-primary);
+      font-size: 11px;
+      font-weight: 400;
+      line-height: 1.4;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      width: 220px;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: all var(--transition);
+      z-index: 100;
+      white-space: normal;
+      text-align: left;
+    }
+
+    .info-tooltip:hover::after {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Searchable Model Selector */
+    .model-select-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .model-select-trigger {
+      width: 100%;
+      min-height: 40px;
+      padding: var(--space-2) var(--space-3);
+      background-color: var(--bg-surface-elevated);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color var(--transition);
+    }
+
+    .model-select-trigger:hover, .model-select-trigger:focus {
+      border-color: var(--accent);
+    }
+
+    .model-select-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: hidden;
+    }
+
+    .selected-model-name {
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-code);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .selected-model-badges {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .meta-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: var(--radius-full);
+      background-color: var(--bg-surface-subtle);
       border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-family: var(--font-ui);
+    }
+
+    .meta-badge.ctx {
+      color: var(--accent);
+      border-color: rgba(245, 80, 54, 0.2);
+    }
+
+    .model-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background-color: var(--bg-surface-elevated);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      z-index: 50;
+      max-height: 280px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .model-search-header {
+      padding: var(--space-2);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      background-color: var(--bg-surface);
+    }
+
+    .model-search-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 12px;
+      font-family: var(--font-ui);
+    }
+
+    .model-list-container {
+      overflow-y: auto;
+      max-height: 220px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .model-list-item {
+      padding: var(--space-2) var(--space-3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      transition: background-color var(--transition);
+    }
+
+    .model-list-item:hover {
+      background-color: var(--bg-surface-subtle);
+    }
+
+    .model-list-item.selected {
+      background-color: var(--accent-subtle);
+    }
+
+    .model-item-title {
+      font-size: 12px;
+      font-weight: 500;
+      font-family: var(--font-code);
+      color: var(--text-primary);
+    }
+
+    .model-item-sub {
+      display: flex;
+      gap: 6px;
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Slider & Number Input Pair */
+    .slider-number-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .param-slider {
+      flex: 1;
+      height: 6px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .param-number-input {
+      width: 64px;
+      height: 30px;
+      background-color: var(--bg-input);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: var(--font-code);
+      font-size: 12px;
+      text-align: right;
+      padding: 0 var(--space-2);
+      outline: none;
+    }
+
+    .param-number-input:focus {
+      border-color: var(--accent);
+    }
+
+    /* Generic Input & Select in Settings */
+    .param-textarea {
+      width: 100%;
+      height: 72px;
+      background-color: var(--bg-input);
+      border: 1px solid var(--border-medium);
       border-radius: var(--radius-md);
       padding: var(--space-2) var(--space-3);
-      color: var(--text-muted);
-      font-size: 13px;
-      cursor: not-allowed;
-    }
-
-    .slider-placeholder {
-      width: 100%;
-      height: 6px;
-      background: var(--bg-surface-subtle);
-      border-radius: var(--radius-full);
-      position: relative;
-      cursor: not-allowed;
-    }
-
-    .slider-fill {
-      width: 70%;
-      height: 100%;
-      background: var(--text-muted);
-      border-radius: var(--radius-full);
-      opacity: 0.5;
-    }
-
-    .settings-placeholder-box {
-      background-color: var(--bg-surface-elevated);
-      border: 1px dashed var(--border-medium);
-      border-radius: var(--radius-lg);
-      padding: var(--space-4);
-      text-align: center;
-      color: var(--text-muted);
+      color: var(--text-primary);
       font-size: 12px;
-      line-height: 1.5;
+      line-height: 1.4;
+      resize: vertical;
+      outline: none;
+    }
+
+    .param-textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .param-select, .param-text-input {
+      width: 100%;
+      height: 34px;
+      background-color: var(--bg-input);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 12px;
+      padding: 0 var(--space-3);
+      outline: none;
+    }
+
+    .param-select:focus, .param-text-input:focus {
+      border-color: var(--accent);
+    }
+
+    .param-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    /* Switch Toggle */
+    .switch-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      padding: var(--space-1) 0;
+    }
+
+    .switch-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+
+    .switch-wrapper input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .switch-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: var(--bg-surface-subtle);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-full);
+      transition: all var(--transition);
+    }
+
+    .switch-slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 2px;
+      bottom: 2px;
+      background-color: #ffffff;
+      border-radius: 50%;
+      transition: all var(--transition);
+    }
+
+    .switch-wrapper input:checked + .switch-slider {
+      background-color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .switch-wrapper input:checked + .switch-slider:before {
+      transform: translateX(16px);
     }
 
     /* Mobile Drawer Backdrop */
@@ -1490,8 +1824,8 @@
           <span class="brand-title">Groq Playground</span>
         </div>
 
-        <!-- Model Badge Placeholder -->
-        <div class="model-badge-placeholder" title="Current Model">
+        <!-- Model Badge in Top Bar (Clickable shortcut to settings) -->
+        <div class="model-badge-placeholder" id="topModelBadge" title="Click to view model parameters">
           <span class="badge-icon"></span>
           <span id="currentModelLabel">llama-3.3-70b-versatile</span>
         </div>
@@ -1577,7 +1911,7 @@
 
         <div class="sidebar-footer">
           <span>Groq LPU™ Engine</span>
-          <span style="color: var(--accent); font-weight: 500;">Phase 2</span>
+          <span style="color: var(--accent); font-weight: 500;">Phase 3</span>
         </div>
       </aside>
 
@@ -1594,7 +1928,7 @@
             
             <h1 class="empty-title">Ultra-fast Groq Playground</h1>
             <p class="empty-subtitle">
-              Experience near-instant LLM generation powered by Groq's Language Processing Units. Connect your API key and pick a prompt below to start streaming.
+              Experience near-instant LLM generation powered by Groq's Language Processing Units. Select or configure parameters on the right, connect your key, and start chatting.
             </p>
 
             <div class="prompt-cards-grid">
@@ -1646,11 +1980,11 @@
               </button>
             </div>
           </div>
-          <p class="chat-disclaimer">Groq Playground • Powered by llama-3.3-70b-versatile on Groq LPUs</p>
+          <p class="chat-disclaimer">Groq Playground • Ultra-low latency LPU inference with customizable parameters</p>
         </div>
       </main>
 
-      <!-- RIGHT SETTINGS PANEL (COLLAPSIBLE) -->
+      <!-- RIGHT SETTINGS PANEL (WIRED PARAMETERS & PRESETS) -->
       <aside id="rightSettings" class="settings-panel">
         <div class="settings-header">
           <span>Parameters</span>
@@ -1663,47 +1997,240 @@
         </div>
 
         <div class="settings-body">
-          <div class="setting-item">
-            <div class="setting-label-row">
-              <span>Model</span>
-              <span>Active</span>
-            </div>
-            <div class="setting-control-placeholder" style="color: var(--text-primary); font-family: var(--font-code);">llama-3.3-70b-versatile</div>
+          <!-- Presets Bar -->
+          <div class="presets-toolbar">
+            <select id="presetSelect" class="preset-select" title="Load Preset">
+              <option value="" disabled selected>Load Preset...</option>
+              <optgroup label="Built-in Presets">
+                <option value="builtin:default">Default (Balanced)</option>
+                <option value="builtin:precise">Precise / Coding</option>
+                <option value="builtin:creative">Creative Writing</option>
+                <option value="builtin:json">JSON Mode</option>
+              </optgroup>
+              <optgroup label="Custom Presets" id="customPresetsOptGroup"></optgroup>
+            </select>
+            <button type="button" id="savePresetBtn" class="btn-preset-action" title="Save current parameters as custom preset">Save</button>
+            <button type="button" id="resetDefaultsBtn" class="btn-preset-action" title="Reset all parameters to default">Reset</button>
           </div>
 
+          <!-- Model Selector (Searchable Dropdown) -->
           <div class="setting-item">
             <div class="setting-label-row">
-              <span>Temperature</span>
-              <span>0.7</span>
+              <span class="setting-label-left">
+                <span>Model</span>
+                <span class="info-tooltip" data-tooltip="Groq LPU chat completion model. Filtered to chat-compatible models.">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </span>
+              </span>
+              <button type="button" id="refreshModelsBtn" class="icon-btn" style="width: 20px; height: 20px;" title="Refresh models from Groq API">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+              </button>
             </div>
-            <div class="slider-placeholder">
-              <div class="slider-fill"></div>
+
+            <div class="model-select-wrapper">
+              <button type="button" id="modelSelectTrigger" class="model-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+                <div class="model-select-info">
+                  <span id="selectedModelName" class="selected-model-name">llama-3.3-70b-versatile</span>
+                  <div class="selected-model-badges">
+                    <span id="selectedModelOwner" class="meta-badge">Meta</span>
+                    <span id="selectedModelCtx" class="meta-badge ctx">128k ctx</span>
+                  </div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+
+              <div id="modelDropdownMenu" class="model-dropdown-menu" style="display: none;">
+                <div class="model-search-header">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  <input type="text" id="modelSearchInput" class="model-search-input" placeholder="Search models by name or owner..." autocomplete="off">
+                </div>
+                <div id="modelListContainer" class="model-list-container"></div>
+              </div>
             </div>
+            <span class="param-hint">Filtered to chat models (whisper, audio &amp; guard excluded).</span>
           </div>
 
+          <!-- System Prompt -->
           <div class="setting-item">
             <div class="setting-label-row">
-              <span>Max Tokens</span>
-              <span>4,096</span>
+              <span class="setting-label-left">
+                <span>System Prompt</span>
+                <span class="info-tooltip" data-tooltip="Instruction to guide the model's behavior, persona, and output style.">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </span>
+              </span>
             </div>
-            <div class="slider-placeholder">
-              <div class="slider-fill" style="width: 50%;"></div>
-            </div>
+            <textarea id="systemPromptInput" class="param-textarea" placeholder="You are a helpful and ultra-fast AI assistant running on Groq LPUs..."></textarea>
+            <span class="param-hint">Optional. Sent as system message when set.</span>
           </div>
 
+          <!-- Temperature -->
           <div class="setting-item">
             <div class="setting-label-row">
-              <span>System Prompt</span>
+              <span class="setting-label-left">
+                <span>Temperature</span>
+                <span class="info-tooltip" data-tooltip="Controls randomness. Lower values are more deterministic and focused; higher values are more creative.">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </span>
+              </span>
             </div>
-            <div class="setting-control-placeholder" style="height: 72px; overflow: hidden; line-height: 1.4;">
-              You are an ultra-fast, helpful AI assistant running on Groq LPUs...
+            <div class="slider-number-row">
+              <input type="range" id="tempSlider" class="param-slider" min="0" max="2" step="0.1" value="1.0">
+              <input type="number" id="tempNumber" class="param-number-input" min="0" max="2" step="0.1" value="1.0">
             </div>
+            <span class="param-hint">Range 0.0 (focused) – 2.0 (creative).</span>
           </div>
 
-          <div class="settings-placeholder-box">
-            <strong>Parameter Configuration</strong><br>
-            Dynamic model switching and custom temperature sliders will be unlocked in the next phase.
+          <!-- Max Completion Tokens -->
+          <div class="setting-item">
+            <div class="setting-label-row">
+              <span class="setting-label-left">
+                <span>Max Completion Tokens</span>
+                <span class="info-tooltip" data-tooltip="Upper bound for tokens generated in the completion (sent as max_completion_tokens).">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </span>
+              </span>
+            </div>
+            <div class="slider-number-row">
+              <input type="range" id="maxTokensSlider" class="param-slider" min="1" max="8192" step="64" value="4096">
+              <input type="number" id="maxTokensNumber" class="param-number-input" min="1" max="32768" step="1" value="4096">
+            </div>
+            <span class="param-hint">Sent as max_completion_tokens (1 – context limit).</span>
           </div>
+
+          <!-- Top P -->
+          <div class="setting-item">
+            <div class="setting-label-row">
+              <span class="setting-label-left">
+                <span>Top P</span>
+                <span class="info-tooltip" data-tooltip="Nucleus sampling. The model considers only tokens comprising the top P probability mass.">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </span>
+              </span>
+            </div>
+            <div class="slider-number-row">
+              <input type="range" id="topPSlider" class="param-slider" min="0" max="1" step="0.05" value="1.0">
+              <input type="number" id="topPNumber" class="param-number-input" min="0" max="1" step="0.01" value="1.0">
+            </div>
+            <span class="param-hint">Range 0.0 – 1.0 (1.0 = consider all tokens).</span>
+          </div>
+
+          <!-- Frequency Penalty -->
+          <div class="setting-item">
+            <div class="setting-label-row">
+              <span class="setting-label-left">
+                <span>Frequency Penalty</span>
+                <span class="info-tooltip" data-tooltip="Penalizes tokens based on frequency in text so far, decreasing verbatim repetition.">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </span>
+              </span>
+            </div>
+            <div class="slider-number-row">
+              <input type="range" id="freqPenaltySlider" class="param-slider" min="-2" max="2" step="0.1" value="0.0">
+              <input type="number" id="freqPenaltyNumber" class="param-number-input" min="-2" max="2" step="0.1" value="0.0">
+            </div>
+            <span class="param-hint">Range -2.0 to 2.0 (default 0.0).</span>
+          </div>
+
+          <!-- Presence Penalty -->
+          <div class="setting-item">
+            <div class="setting-label-row">
+              <span class="setting-label-left">
+                <span>Presence Penalty</span>
+                <span class="info-tooltip" data-tooltip="Penalizes tokens based on presence in text so far, encouraging topic introduction.">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </span>
+              </span>
+            </div>
+            <div class="slider-number-row">
+              <input type="range" id="presPenaltySlider" class="param-slider" min="-2" max="2" step="0.1" value="0.0">
+              <input type="number" id="presPenaltyNumber" class="param-number-input" min="-2" max="2" step="0.1" value="0.0">
+            </div>
+            <span class="param-hint">Range -2.0 to 2.0 (default 0.0).</span>
+          </div>
+
+          <!-- Stop Sequences -->
+          <div class="setting-item">
+            <div class="setting-label-row">
+              <span class="setting-label-left">
+                <span>Stop Sequences</span>
+                <span class="info-tooltip" data-tooltip="Up to 4 sequences where generation will stop automatically.">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </span>
+              </span>
+            </div>
+            <input type="text" id="stopSequencesInput" class="param-text-input" placeholder="e.g. END, ###, Stop">
+            <span class="param-hint" id="stopHint">Comma-separated (max 4).</span>
+          </div>
+
+          <!-- Seed -->
+          <div class="setting-item">
+            <div class="setting-label-row">
+              <span class="setting-label-left">
+                <span>Seed</span>
+                <span class="info-tooltip" data-tooltip="Optional integer for best-effort deterministic sampling.">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </span>
+              </span>
+            </div>
+            <input type="number" id="seedInput" class="param-text-input" placeholder="e.g. 42 (blank for random)" step="1">
+            <span class="param-hint">Integer for reproducibility.</span>
+          </div>
+
+          <!-- Response Format -->
+          <div class="setting-item">
+            <div class="setting-label-row">
+              <span class="setting-label-left">
+                <span>Response Format</span>
+                <span class="info-tooltip" data-tooltip="Enables JSON mode (guarantees valid JSON). Prompt must also instruct the model to output JSON.">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </span>
+              </span>
+            </div>
+            <select id="responseFormatSelect" class="param-select">
+              <option value="text">Default (Text)</option>
+              <option value="json_object">JSON Mode (json_object)</option>
+            </select>
+            <span class="param-hint" id="jsonHint">Forces valid JSON structure.</span>
+          </div>
+
+          <!-- Reasoning Effort (Visible only for reasoning models) -->
+          <div class="setting-item" id="reasoningEffortContainer" style="display: none;">
+            <div class="setting-label-row">
+              <span class="setting-label-left">
+                <span>Reasoning Effort</span>
+                <span class="info-tooltip" data-tooltip="Constrains thinking budget on reasoning-capable models (e.g. DeepSeek-R1).">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </span>
+              </span>
+            </div>
+            <select id="reasoningEffortSelect" class="param-select">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+            <span class="param-hint">Supported on reasoning-enabled models.</span>
+          </div>
+
+          <!-- Streaming Switch -->
+          <div class="setting-item">
+            <label class="switch-label-row">
+              <span class="setting-label-left">
+                <span>Stream Response</span>
+                <span class="info-tooltip" data-tooltip="Real-time SSE token streaming. Turn off to receive the full message once completed.">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </span>
+              </span>
+              <div class="switch-wrapper">
+                <input type="checkbox" id="streamToggle" checked>
+                <span class="switch-slider"></span>
+              </div>
+            </label>
+            <span class="param-hint" id="streamHint">SSE streaming enabled.</span>
+          </div>
+
         </div>
       </aside>
 
@@ -1802,20 +2329,98 @@
 
   <!-- ==========================================================================
        6. JAVASCRIPT LOGIC
-       - Constants & State
+       - Constants, Defaults & Presets
+       - State
        - Storage
-       - API (Model validation & Streaming completions)
-       - UI (DOM handling, markdown rendering, error handling, events)
+       - API (Models Fetch, Chat Completion & Streaming)
+       - UI & Validation
        - Initialization
        ========================================================================== */
   <script>
     /* --------------------------------------------------------------------------
-       CONSTANTS & STATE
+       CONSTANTS & DEFAULTS
        -------------------------------------------------------------------------- */
     const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
     const STORAGE_KEY = 'groq_api_key';
     const THEME_KEY = 'groq_theme';
+    const SETTINGS_KEY = 'groq_playground_settings';
+    const PRESETS_KEY = 'groq_custom_presets';
 
+    // Reliable fallback models list if /models endpoint fails or offline
+    const FALLBACK_MODELS = [
+      { id: 'llama-3.3-70b-versatile', owned_by: 'Meta', context_window: 131072 },
+      { id: 'llama-3.1-8b-instant', owned_by: 'Meta', context_window: 131072 },
+      { id: 'llama3-70b-8192', owned_by: 'Meta', context_window: 8192 },
+      { id: 'llama3-8b-8192', owned_by: 'Meta', context_window: 8192 },
+      { id: 'mixtral-8x7b-32768', owned_by: 'Mistral AI', context_window: 32768 },
+      { id: 'gemma2-9b-it', owned_by: 'Google', context_window: 8192 },
+      { id: 'deepseek-r1-distill-llama-70b', owned_by: 'DeepSeek', context_window: 131072 },
+      { id: 'qwen-2.5-32b', owned_by: 'Alibaba', context_window: 131072 }
+    ];
+
+    // Standard parameter defaults
+    const DEFAULT_SETTINGS = {
+      model: DEFAULT_MODEL,
+      systemPrompt: '',
+      temperature: 1.0,
+      maxTokens: 4096,
+      topP: 1.0,
+      frequencyPenalty: 0.0,
+      presencePenalty: 0.0,
+      stopSequences: '',
+      seed: '',
+      responseFormat: 'text',
+      reasoningEffort: 'medium',
+      stream: true
+    };
+
+    // Built-in presets
+    const BUILTIN_PRESETS = {
+      'builtin:default': {
+        name: 'Default (Balanced)',
+        settings: { ...DEFAULT_SETTINGS }
+      },
+      'builtin:precise': {
+        name: 'Precise / Coding',
+        settings: {
+          ...DEFAULT_SETTINGS,
+          temperature: 0.2,
+          maxTokens: 4096,
+          topP: 0.95,
+          frequencyPenalty: 0.0,
+          presencePenalty: 0.0,
+          systemPrompt: 'You are an expert programming assistant. Provide concise, production-ready, bug-free code.'
+        }
+      },
+      'builtin:creative': {
+        name: 'Creative Writing',
+        settings: {
+          ...DEFAULT_SETTINGS,
+          temperature: 1.3,
+          maxTokens: 4096,
+          topP: 0.9,
+          frequencyPenalty: 0.3,
+          presencePenalty: 0.4,
+          systemPrompt: 'You are an imaginative creative writer with a vivid and evocative style.'
+        }
+      },
+      'builtin:json': {
+        name: 'JSON Mode',
+        settings: {
+          ...DEFAULT_SETTINGS,
+          temperature: 0.3,
+          maxTokens: 4096,
+          topP: 1.0,
+          responseFormat: 'json_object',
+          systemPrompt: 'You are a structured data extractor. You must always output valid JSON adhering to the user schema.'
+        }
+      }
+    };
+
+    /* --------------------------------------------------------------------------
+       STATE
+       Centralized reactive application state
+       -------------------------------------------------------------------------- */
     const state = {
       apiKey: null,
       isKeyValid: false,
@@ -1824,26 +2429,25 @@
       isSidebarOpen: false,
       isSettingsOpen: false,
       isKeyModalOpen: false,
+      isModelDropdownOpen: false,
       isGenerating: false,
       abortController: null,
-      messages: [] // Full multi-turn conversation: Array<{ role: 'user' | 'assistant', content: string }>
+      availableModels: [...FALLBACK_MODELS],
+      messages: [], // Array<{ role: 'user' | 'assistant', content: string }>
+      settings: { ...DEFAULT_SETTINGS }
     };
 
     /* --------------------------------------------------------------------------
        STORAGE
-       Browser storage helpers for API Key & Theme selection
+       Helpers for API Key, theme, settings, and custom presets
        -------------------------------------------------------------------------- */
     const storage = {
       getKey() {
         try {
           const localVal = localStorage.getItem(STORAGE_KEY);
-          if (localVal) {
-            return { key: localVal, type: 'local' };
-          }
+          if (localVal) return { key: localVal, type: 'local' };
           const sessionVal = sessionStorage.getItem(STORAGE_KEY);
-          if (sessionVal) {
-            return { key: sessionVal, type: 'session' };
-          }
+          if (sessionVal) return { key: sessionVal, type: 'session' };
         } catch (_) {}
         return { key: null, type: 'local' };
       },
@@ -1879,16 +2483,157 @@
         try {
           localStorage.setItem(THEME_KEY, theme);
         } catch (_) {}
+      },
+
+      getSettings() {
+        try {
+          const raw = localStorage.getItem(SETTINGS_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            return { ...DEFAULT_SETTINGS, ...parsed };
+          }
+        } catch (_) {}
+        return { ...DEFAULT_SETTINGS };
+      },
+
+      saveSettings(settings) {
+        try {
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        } catch (_) {}
+      },
+
+      getCustomPresets() {
+        try {
+          const raw = localStorage.getItem(PRESETS_KEY);
+          if (raw) return JSON.parse(raw);
+        } catch (_) {}
+        return [];
+      },
+
+      saveCustomPreset(name, settings) {
+        try {
+          const presets = storage.getCustomPresets();
+          const existingIndex = presets.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+          if (existingIndex >= 0) {
+            presets[existingIndex].settings = { ...settings };
+          } else {
+            presets.push({ id: `custom:${Date.now()}`, name: name, settings: { ...settings } });
+          }
+          localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+        } catch (_) {}
       }
     };
 
     /* --------------------------------------------------------------------------
+       HELPERS & MODEL UTILITIES
+       -------------------------------------------------------------------------- */
+    function isChatModel(model) {
+      const id = (model.id || '').toLowerCase();
+      // Exclude speech, audio, whisper, guard, embeddings
+      if (id.includes('whisper') || id.includes('tts') || id.includes('audio') ||
+          id.includes('guard') || id.includes('safeguard') || id.includes('embed') || id.includes('moderation')) {
+        return false;
+      }
+      return true;
+    }
+
+    function isReasoningModel(modelId) {
+      if (!modelId) return false;
+      const lower = modelId.toLowerCase();
+      return lower.includes('r1') || lower.includes('deepseek-r1') || lower.includes('reason');
+    }
+
+    function formatContextWindow(tokens) {
+      if (!tokens) return '';
+      const num = Number(tokens);
+      if (isNaN(num)) return '';
+      if (num >= 1024) {
+        return `${Math.round(num / 1024)}k`;
+      }
+      return `${num}`;
+    }
+
+    // Build API payload including parameters only when valid / set
+    function buildChatPayload(messages, settings, isStream = true) {
+      const fullMessages = [];
+      // Prepend system prompt if non-empty
+      if (settings.systemPrompt && settings.systemPrompt.trim()) {
+        fullMessages.push({ role: 'system', content: settings.systemPrompt.trim() });
+      }
+      for (const m of messages) {
+        fullMessages.push({ role: m.role, content: m.content });
+      }
+
+      const payload = {
+        model: settings.model || DEFAULT_MODEL,
+        messages: fullMessages,
+        stream: isStream
+      };
+
+      // Temperature: include clamped value
+      if (typeof settings.temperature === 'number') {
+        payload.temperature = Math.max(0, Math.min(2, Math.round(settings.temperature * 10) / 10));
+      }
+
+      // Max completion tokens (sent as max_completion_tokens)
+      if (settings.maxTokens && Number(settings.maxTokens) > 0) {
+        payload.max_completion_tokens = parseInt(settings.maxTokens, 10);
+      }
+
+      // Top P: include if not default 1.0 or explicitly adjusted
+      if (typeof settings.topP === 'number' && settings.topP < 1.0) {
+        payload.top_p = Math.max(0, Math.min(1, Math.round(settings.topP * 100) / 100));
+      }
+
+      // Frequency penalty: include only if non-zero
+      if (typeof settings.frequencyPenalty === 'number' && settings.frequencyPenalty !== 0) {
+        payload.frequency_penalty = Math.max(-2, Math.min(2, Math.round(settings.frequencyPenalty * 10) / 10));
+      }
+
+      // Presence penalty: include only if non-zero
+      if (typeof settings.presencePenalty === 'number' && settings.presencePenalty !== 0) {
+        payload.presence_penalty = Math.max(-2, Math.min(2, Math.round(settings.presencePenalty * 10) / 10));
+      }
+
+      // Stop sequences: parse comma-separated, max 4
+      if (settings.stopSequences && typeof settings.stopSequences === 'string' && settings.stopSequences.trim()) {
+        const stops = settings.stopSequences
+          .split(',')
+          .map(s => s.trim())
+          .filter(s => s.length > 0)
+          .slice(0, 4);
+        if (stops.length > 0) {
+          payload.stop = stops;
+        }
+      }
+
+      // Seed: integer if provided
+      if (settings.seed !== '' && settings.seed !== null && settings.seed !== undefined) {
+        const seedInt = parseInt(settings.seed, 10);
+        if (!isNaN(seedInt)) {
+          payload.seed = seedInt;
+        }
+      }
+
+      // Response format: json_object
+      if (settings.responseFormat === 'json_object') {
+        payload.response_format = { type: 'json_object' };
+      }
+
+      // Reasoning effort: send only if supported by model
+      if (isReasoningModel(settings.model) && settings.reasoningEffort) {
+        payload.reasoning_effort = settings.reasoningEffort;
+      }
+
+      return payload;
+    }
+
+    /* --------------------------------------------------------------------------
        API
-       Groq API network operations.
-       SECURITY: API keys are NEVER logged or transmitted anywhere except api.groq.com.
+       Groq API operations (Models list, Streaming & Non-streaming completions)
        -------------------------------------------------------------------------- */
     const api = {
-      // Validate key against /openai/v1/models
+      // Validate key & optionally fetch models
       async validateKey(candidateKey) {
         const trimmed = (candidateKey || '').trim();
         if (!trimmed) {
@@ -1929,13 +2674,42 @@
         }
       },
 
+      // Fetch models and filter to chat models
+      async fetchModels() {
+        if (!state.apiKey) {
+          return { success: false, models: FALLBACK_MODELS };
+        }
+
+        try {
+          const response = await fetch('https://api.groq.com/openai/v1/models', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${state.apiKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            return { success: false, models: FALLBACK_MODELS };
+          }
+
+          const data = await response.json();
+          if (data && Array.isArray(data.data)) {
+            const chatModels = data.data.filter(isChatModel).map(m => ({
+              id: m.id,
+              owned_by: m.owned_by || 'Groq',
+              context_window: m.context_window || null
+            }));
+            return { success: true, models: chatModels.length > 0 ? chatModels : FALLBACK_MODELS };
+          }
+        } catch (_) {}
+
+        return { success: false, models: FALLBACK_MODELS };
+      },
+
       // Stream Chat Completion via SSE
-      async streamChatCompletion(messages, onChunk, signal) {
-        const payload = {
-          model: DEFAULT_MODEL,
-          messages: messages.map(m => ({ role: m.role, content: m.content })),
-          stream: true
-        };
+      async streamChatCompletion(messages, settings, onChunk, signal) {
+        const payload = buildChatPayload(messages, settings, true);
 
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
@@ -1981,7 +2755,7 @@
 
           for (const line of lines) {
             const trimmed = line.trim();
-            if (!trimmed || trimmed.startsWith(':')) continue; // Skip comments/keep-alive
+            if (!trimmed || trimmed.startsWith(':')) continue;
 
             if (trimmed === 'data: [DONE]') {
               return { success: true };
@@ -1994,14 +2768,11 @@
                 if (delta) {
                   onChunk(delta);
                 }
-              } catch (_) {
-                // Incomplete JSON fragment, continue streaming
-              }
+              } catch (_) {}
             }
           }
         }
 
-        // Flush any remaining line
         if (buffer.trim().startsWith('data: ') && buffer.trim() !== 'data: [DONE]') {
           try {
             const json = JSON.parse(buffer.trim().slice(6));
@@ -2011,12 +2782,42 @@
         }
 
         return { success: true };
+      },
+
+      // Non-streaming completion fallback
+      async createChatCompletion(messages, settings, signal) {
+        const payload = buildChatPayload(messages, settings, false);
+
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${state.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload),
+          signal: signal
+        });
+
+        if (!response.ok) {
+          const status = response.status;
+          const retryAfter = response.headers.get('retry-after');
+          let errorMsg = null;
+          try {
+            const errJson = await response.json();
+            if (errJson && errJson.error) errorMsg = errJson.error.message;
+          } catch (_) {}
+          return { success: false, status: status, retryAfter: retryAfter, error: errorMsg || response.statusText };
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content || '';
+        return { success: true, content: content };
       }
     };
 
     /* --------------------------------------------------------------------------
        UI
-       DOM interaction, Markdown parsing with marked.js, DOMPurify & highlight.js
+       DOM interaction, Markdown rendering, Settings, Presets, and Event handlers
        -------------------------------------------------------------------------- */
     const ui = {
       elements: {},
@@ -2029,7 +2830,9 @@
           themeToggleBtn: document.getElementById('themeToggleBtn'),
           themeIconDark: document.getElementById('themeIconDark'),
           themeIconLight: document.getElementById('themeIconLight'),
-          // Key Status
+          // Top Bar
+          topModelBadge: document.getElementById('topModelBadge'),
+          currentModelLabel: document.getElementById('currentModelLabel'),
           keyStatusBtn: document.getElementById('keyStatusBtn'),
           keyStatusDot: document.getElementById('keyStatusDot'),
           keyStatusLabel: document.getElementById('keyStatusLabel'),
@@ -2066,12 +2869,43 @@
           chatStopContainer: document.getElementById('chatStopContainer'),
           stopGenBtn: document.getElementById('stopGenBtn'),
           toast: document.getElementById('toast'),
-          toastMessage: document.getElementById('toastMessage')
+          toastMessage: document.getElementById('toastMessage'),
+          // Settings Controls
+          presetSelect: document.getElementById('presetSelect'),
+          customPresetsOptGroup: document.getElementById('customPresetsOptGroup'),
+          savePresetBtn: document.getElementById('savePresetBtn'),
+          resetDefaultsBtn: document.getElementById('resetDefaultsBtn'),
+          refreshModelsBtn: document.getElementById('refreshModelsBtn'),
+          modelSelectTrigger: document.getElementById('modelSelectTrigger'),
+          modelDropdownMenu: document.getElementById('modelDropdownMenu'),
+          modelSearchInput: document.getElementById('modelSearchInput'),
+          modelListContainer: document.getElementById('modelListContainer'),
+          selectedModelName: document.getElementById('selectedModelName'),
+          selectedModelOwner: document.getElementById('selectedModelOwner'),
+          selectedModelCtx: document.getElementById('selectedModelCtx'),
+          systemPromptInput: document.getElementById('systemPromptInput'),
+          tempSlider: document.getElementById('tempSlider'),
+          tempNumber: document.getElementById('tempNumber'),
+          maxTokensSlider: document.getElementById('maxTokensSlider'),
+          maxTokensNumber: document.getElementById('maxTokensNumber'),
+          topPSlider: document.getElementById('topPSlider'),
+          topPNumber: document.getElementById('topPNumber'),
+          freqPenaltySlider: document.getElementById('freqPenaltySlider'),
+          freqPenaltyNumber: document.getElementById('freqPenaltyNumber'),
+          presPenaltySlider: document.getElementById('presPenaltySlider'),
+          presPenaltyNumber: document.getElementById('presPenaltyNumber'),
+          stopSequencesInput: document.getElementById('stopSequencesInput'),
+          stopHint: document.getElementById('stopHint'),
+          seedInput: document.getElementById('seedInput'),
+          responseFormatSelect: document.getElementById('responseFormatSelect'),
+          reasoningEffortContainer: document.getElementById('reasoningEffortContainer'),
+          reasoningEffortSelect: document.getElementById('reasoningEffortSelect'),
+          streamToggle: document.getElementById('streamToggle'),
+          streamHint: document.getElementById('streamHint')
         };
       },
 
       initMarkdown() {
-        // Configure marked.js with highlight.js syntax coloring & custom code block renderer
         marked.setOptions({
           gfm: true,
           breaks: true,
@@ -2250,6 +3084,7 @@
         state.isSettingsOpen = false;
         this.elements.leftSidebar.classList.remove('open');
         this.elements.rightSettings.classList.remove('open');
+        this.closeModelDropdown();
         this.updateDrawerBackdrop();
       },
 
@@ -2258,7 +3093,7 @@
         this.elements.drawerBackdrop.classList.toggle('active', shouldShow);
       },
 
-      // Auto-grow textarea height
+      // Auto-grow textarea
       adjustTextareaHeight() {
         const textarea = this.elements.messageInput;
         textarea.style.height = 'auto';
@@ -2303,7 +3138,6 @@
         scrollArea.scrollTop = scrollArea.scrollHeight;
       },
 
-      // Append user bubble to DOM
       appendUserMessage(text) {
         this.elements.emptyState.style.display = 'none';
         this.elements.messagesContainer.style.display = 'flex';
@@ -2335,7 +3169,6 @@
         this.forceScrollToBottom();
       },
 
-      // Create assistant bubble placeholder with typing indicator
       createAssistantPlaceholder() {
         const row = document.createElement('div');
         row.className = 'message-row assistant';
@@ -2354,7 +3187,6 @@
         const bubble = document.createElement('div');
         bubble.className = 'message-bubble';
 
-        // Typing indicator
         const typingIndicator = document.createElement('div');
         typingIndicator.className = 'typing-indicator';
         typingIndicator.innerHTML = `
@@ -2363,7 +3195,6 @@
           <span class="typing-dot"></span>
         `;
 
-        // Markdown content container
         const markdownBody = document.createElement('div');
         markdownBody.className = 'markdown-body';
         markdownBody.style.display = 'none';
@@ -2385,7 +3216,6 @@
         };
       },
 
-      // Render friendly inline error inside the assistant response
       renderInlineError(bubbleWrapper, status, errorText, retryAfter = null) {
         let title = 'Error';
         let friendlyMsg = errorText || 'An unexpected error occurred.';
@@ -2402,12 +3232,12 @@
             break;
           case 403:
             title = '403 Forbidden';
-            friendlyMsg = 'You do not have permission to access model llama-3.3-70b-versatile or your account is restricted.';
+            friendlyMsg = `You do not have permission to access model ${state.settings.model} or your account is restricted.`;
             canRetry = false;
             break;
           case 404:
             title = '404 Not Found';
-            friendlyMsg = 'The requested model or API endpoint could not be found.';
+            friendlyMsg = `The requested model (${state.settings.model}) or API endpoint could not be found.`;
             canRetry = false;
             break;
           case 413:
@@ -2465,7 +3295,6 @@
           </div>
         `;
 
-        // Attach event handlers
         const retryBtn = errorCard.querySelector('.retry-btn-action');
         if (retryBtn) {
           retryBtn.addEventListener('click', () => {
@@ -2492,7 +3321,6 @@
         this.scrollToBottomIfNeeded();
       },
 
-      // Append generation stopped notice
       renderStoppedNotice(bubbleWrapper) {
         const notice = document.createElement('div');
         notice.className = 'generation-stopped-notice';
@@ -2506,7 +3334,252 @@
         this.scrollToBottomIfNeeded();
       },
 
-      // Core: Send user message and stream assistant response
+      // ========================================================================
+      // SETTINGS PANEL & MODEL SELECTOR IMPLEMENTATION
+      // ========================================================================
+      populateModelList(filterQuery = '') {
+        const container = this.elements.modelListContainer;
+        container.innerHTML = '';
+        const q = filterQuery.trim().toLowerCase();
+
+        const filtered = state.availableModels.filter(m => {
+          if (!q) return true;
+          return m.id.toLowerCase().includes(q) || (m.owned_by && m.owned_by.toLowerCase().includes(q));
+        });
+
+        if (filtered.length === 0) {
+          const noMatch = document.createElement('div');
+          noMatch.style.padding = '12px';
+          noMatch.style.fontSize = '12px';
+          noMatch.style.color = 'var(--text-muted)';
+          noMatch.style.textAlign = 'center';
+          noMatch.textContent = 'No matching models found';
+          container.appendChild(noMatch);
+          return;
+        }
+
+        filtered.forEach(m => {
+          const item = document.createElement('div');
+          const isSelected = m.id === state.settings.model;
+          item.className = `model-list-item ${isSelected ? 'selected' : ''}`;
+          item.setAttribute('data-id', m.id);
+
+          const ctxStr = formatContextWindow(m.context_window);
+
+          item.innerHTML = `
+            <div>
+              <div class="model-item-title">${m.id}</div>
+              <div class="model-item-sub">
+                <span>${m.owned_by || 'Groq'}</span>
+                ${ctxStr ? `<span>• ${ctxStr} context</span>` : ''}
+              </div>
+            </div>
+            ${isSelected ? `
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent);">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            ` : ''}
+          `;
+
+          item.addEventListener('click', () => {
+            this.selectModel(m.id);
+            this.closeModelDropdown();
+          });
+
+          container.appendChild(item);
+        });
+      },
+
+      selectModel(modelId) {
+        state.settings.model = modelId;
+        storage.saveSettings(state.settings);
+
+        // Update trigger display & top badge
+        this.elements.currentModelLabel.textContent = modelId;
+        this.elements.selectedModelName.textContent = modelId;
+
+        const found = state.availableModels.find(m => m.id === modelId);
+        const owner = found ? (found.owned_by || 'Groq') : 'Groq';
+        const ctxStr = found && found.context_window ? `${formatContextWindow(found.context_window)} ctx` : '128k ctx';
+
+        this.elements.selectedModelOwner.textContent = owner;
+        this.elements.selectedModelCtx.textContent = ctxStr;
+
+        // Reasoning effort visibility check
+        const supportsReasoning = isReasoningModel(modelId);
+        this.elements.reasoningEffortContainer.style.display = supportsReasoning ? 'flex' : 'none';
+
+        this.populateModelList(this.elements.modelSearchInput.value);
+        this.showToast(`Selected model: ${modelId}`);
+      },
+
+      toggleModelDropdown() {
+        if (state.isModelDropdownOpen) {
+          this.closeModelDropdown();
+        } else {
+          this.openModelDropdown();
+        }
+      },
+
+      openModelDropdown() {
+        state.isModelDropdownOpen = true;
+        this.elements.modelDropdownMenu.style.display = 'flex';
+        this.elements.modelSelectTrigger.setAttribute('aria-expanded', 'true');
+        this.elements.modelSearchInput.value = '';
+        this.populateModelList('');
+        this.elements.modelSearchInput.focus();
+      },
+
+      closeModelDropdown() {
+        state.isModelDropdownOpen = false;
+        this.elements.modelDropdownMenu.style.display = 'none';
+        this.elements.modelSelectTrigger.setAttribute('aria-expanded', 'false');
+      },
+
+      // Synchronize DOM inputs with state.settings
+      syncSettingsToDOM() {
+        const s = state.settings;
+        this.selectModel(s.model || DEFAULT_MODEL);
+
+        this.elements.systemPromptInput.value = s.systemPrompt || '';
+        
+        // Temperature (clamped 0 - 2)
+        const temp = typeof s.temperature === 'number' ? s.temperature : 1.0;
+        this.elements.tempSlider.value = temp;
+        this.elements.tempNumber.value = temp;
+
+        // Max Tokens
+        const maxTok = s.maxTokens || 4096;
+        this.elements.maxTokensSlider.value = Math.min(maxTok, 8192);
+        this.elements.maxTokensNumber.value = maxTok;
+
+        // Top P
+        const topP = typeof s.topP === 'number' ? s.topP : 1.0;
+        this.elements.topPSlider.value = topP;
+        this.elements.topPNumber.value = topP;
+
+        // Frequency Penalty
+        const freqP = typeof s.frequencyPenalty === 'number' ? s.frequencyPenalty : 0.0;
+        this.elements.freqPenaltySlider.value = freqP;
+        this.elements.freqPenaltyNumber.value = freqP;
+
+        // Presence Penalty
+        const presP = typeof s.presencePenalty === 'number' ? s.presencePenalty : 0.0;
+        this.elements.presPenaltySlider.value = presP;
+        this.elements.presPenaltyNumber.value = presP;
+
+        // Stop Sequences
+        this.elements.stopSequencesInput.value = s.stopSequences || '';
+        this.validateStopSequences(false);
+
+        // Seed
+        this.elements.seedInput.value = s.seed !== '' ? s.seed : '';
+
+        // Response Format
+        this.elements.responseFormatSelect.value = s.responseFormat || 'text';
+        this.updateResponseFormatHint();
+
+        // Reasoning Effort
+        this.elements.reasoningEffortSelect.value = s.reasoningEffort || 'medium';
+
+        // Streaming Toggle
+        const isStreaming = s.stream !== false;
+        this.elements.streamToggle.checked = isStreaming;
+        this.elements.streamHint.textContent = isStreaming ? 'SSE streaming enabled.' : 'Non-streaming mode (waits for full response).';
+      },
+
+      validateStopSequences(showToastIfClamped = true) {
+        const raw = this.elements.stopSequencesInput.value;
+        const tokens = raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+        if (tokens.length > 4) {
+          const clamped = tokens.slice(0, 4).join(', ');
+          this.elements.stopSequencesInput.value = clamped;
+          state.settings.stopSequences = clamped;
+          this.elements.stopHint.textContent = 'Clamped to max 4 sequences.';
+          this.elements.stopHint.style.color = 'var(--accent)';
+          if (showToastIfClamped) {
+            this.showToast('Max 4 stop sequences allowed. Extra sequences removed.');
+          }
+        } else {
+          state.settings.stopSequences = raw;
+          this.elements.stopHint.textContent = 'Comma-separated (max 4).';
+          this.elements.stopHint.style.color = 'var(--text-muted)';
+        }
+        storage.saveSettings(state.settings);
+      },
+
+      updateResponseFormatHint() {
+        const format = this.elements.responseFormatSelect.value;
+        if (format === 'json_object') {
+          this.elements.jsonHint.textContent = 'Active: Prompt MUST contain the word "JSON".';
+          this.elements.jsonHint.style.color = 'var(--accent)';
+        } else {
+          this.elements.jsonHint.textContent = 'Default text output.';
+          this.elements.jsonHint.style.color = 'var(--text-muted)';
+        }
+      },
+
+      renderCustomPresetsDropdown() {
+        const optgroup = this.elements.customPresetsOptGroup;
+        optgroup.innerHTML = '';
+        const presets = storage.getCustomPresets();
+        presets.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.name;
+          optgroup.appendChild(opt);
+        });
+      },
+
+      loadPreset(presetId) {
+        if (!presetId) return;
+
+        let targetSettings = null;
+        let presetName = '';
+
+        if (presetId.startsWith('builtin:')) {
+          const b = BUILTIN_PRESETS[presetId];
+          if (b) {
+            targetSettings = b.settings;
+            presetName = b.name;
+          }
+        } else {
+          const customList = storage.getCustomPresets();
+          const c = customList.find(p => p.id === presetId);
+          if (c) {
+            targetSettings = c.settings;
+            presetName = c.name;
+          }
+        }
+
+        if (targetSettings) {
+          state.settings = { ...DEFAULT_SETTINGS, ...targetSettings };
+          storage.saveSettings(state.settings);
+          this.syncSettingsToDOM();
+          this.showToast(`Loaded preset: ${presetName}`);
+        }
+      },
+
+      saveCurrentPreset() {
+        const name = prompt('Enter a name for this custom preset:');
+        if (name && name.trim()) {
+          storage.saveCustomPreset(name.trim(), state.settings);
+          this.renderCustomPresetsDropdown();
+          this.showToast(`Preset "${name.trim()}" saved.`);
+        }
+      },
+
+      resetDefaults() {
+        state.settings = { ...DEFAULT_SETTINGS };
+        storage.saveSettings(state.settings);
+        this.syncSettingsToDOM();
+        this.elements.presetSelect.value = '';
+        this.showToast('All parameters reset to defaults.');
+      },
+
+      // ========================================================================
+      // SEND MESSAGE & COMPLETIONS
+      // ========================================================================
       async sendMessageAction(customText = null) {
         if (state.isGenerating) return;
 
@@ -2537,32 +3610,58 @@
         state.abortController = new AbortController();
 
         try {
-          const result = await api.streamChatCompletion(
-            state.messages,
-            (chunk) => {
-              if (!hasReceivedFirstChunk) {
-                hasReceivedFirstChunk = true;
-                assistantPlaceholder.typingIndicator.style.display = 'none';
-                assistantPlaceholder.markdownBody.style.display = 'block';
-              }
-              assistantContent += chunk;
-              assistantPlaceholder.markdownBody.innerHTML = this.renderMarkdownToHtml(assistantContent);
-              this.scrollToBottomIfNeeded();
-            },
-            state.abortController.signal
-          );
-
-          if (!result.success) {
-            assistantPlaceholder.typingIndicator.style.display = 'none';
-            this.renderInlineError(
-              assistantPlaceholder.bubbleWrapper,
-              result.status,
-              result.error,
-              result.retryAfter
+          if (state.settings.stream) {
+            // Streaming mode (SSE)
+            const result = await api.streamChatCompletion(
+              state.messages,
+              state.settings,
+              (chunk) => {
+                if (!hasReceivedFirstChunk) {
+                  hasReceivedFirstChunk = true;
+                  assistantPlaceholder.typingIndicator.style.display = 'none';
+                  assistantPlaceholder.markdownBody.style.display = 'block';
+                }
+                assistantContent += chunk;
+                assistantPlaceholder.markdownBody.innerHTML = this.renderMarkdownToHtml(assistantContent);
+                this.scrollToBottomIfNeeded();
+              },
+              state.abortController.signal
             );
+
+            if (!result.success) {
+              assistantPlaceholder.typingIndicator.style.display = 'none';
+              this.renderInlineError(
+                assistantPlaceholder.bubbleWrapper,
+                result.status,
+                result.error,
+                result.retryAfter
+              );
+            } else {
+              state.messages.push({ role: 'assistant', content: assistantContent });
+            }
           } else {
-            // Success: record full assistant message in state
-            state.messages.push({ role: 'assistant', content: assistantContent });
+            // Non-streaming mode: wait for complete JSON completion
+            const result = await api.createChatCompletion(
+              state.messages,
+              state.settings,
+              state.abortController.signal
+            );
+
+            assistantPlaceholder.typingIndicator.style.display = 'none';
+
+            if (!result.success) {
+              this.renderInlineError(
+                assistantPlaceholder.bubbleWrapper,
+                result.status,
+                result.error,
+                result.retryAfter
+              );
+            } else {
+              assistantPlaceholder.markdownBody.style.display = 'block';
+              assistantPlaceholder.markdownBody.innerHTML = this.renderMarkdownToHtml(result.content);
+              state.messages.push({ role: 'assistant', content: result.content });
+              this.scrollToBottomIfNeeded();
+            }
           }
         } catch (err) {
           assistantPlaceholder.typingIndicator.style.display = 'none';
@@ -2585,22 +3684,18 @@
         }
       },
 
-      // Stop generating action
       stopGeneratingAction() {
         if (state.isGenerating && state.abortController) {
           state.abortController.abort();
         }
       },
 
-      // Retry the last message in the history
       retryLastMessage() {
         if (state.isGenerating) return;
 
-        // Find last user message
         const lastUserMsg = [...state.messages].reverse().find(m => m.role === 'user');
         if (!lastUserMsg) return;
 
-        // Pop last message(s) if needed to resend cleanly
         if (state.messages.length > 0 && state.messages[state.messages.length - 1].role === 'assistant') {
           state.messages.pop();
         }
@@ -2611,7 +3706,6 @@
         this.sendMessageAction(lastUserMsg.content);
       },
 
-      // Clear chat & start a new one
       newChatAction() {
         if (state.isGenerating && state.abortController) {
           state.abortController.abort();
@@ -2630,9 +3724,17 @@
         this.showToast('Started new conversation');
       },
 
+      // ========================================================================
+      // BIND EVENTS
+      // ========================================================================
       bindEvents() {
-        // Theme Toggle
+        // Theme
         this.elements.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
+
+        // Top bar model badge opens/toggles settings
+        this.elements.topModelBadge.addEventListener('click', () => {
+          this.toggleSettingsPanel(true);
+        });
 
         // Key Status Button opens modal
         this.elements.keyStatusBtn.addEventListener('click', () => {
@@ -2663,7 +3765,7 @@
           await this.validateAndSaveAction();
         });
 
-        // Enter key in API modal input
+        // Enter key in API modal
         this.elements.apiKeyInput.addEventListener('keydown', async (e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
@@ -2748,15 +3850,188 @@
           }
         });
 
-        // Drawers
+        // Settings Drawers
         this.elements.mobileSidebarToggle.addEventListener('click', () => this.toggleMobileSidebar());
         this.elements.toggleSettingsBtn.addEventListener('click', () => this.toggleSettingsPanel());
         this.elements.closeSettingsBtn.addEventListener('click', () => this.toggleSettingsPanel(false));
         this.elements.drawerBackdrop.addEventListener('click', () => this.closeAllDrawers());
 
-        // Escape key closes modal & drawers
+        // Model Selector Dropdown Trigger
+        this.elements.modelSelectTrigger.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.toggleModelDropdown();
+        });
+
+        // Model Search Filter
+        this.elements.modelSearchInput.addEventListener('input', (e) => {
+          this.populateModelList(e.target.value);
+        });
+
+        // Refresh Models Button
+        this.elements.refreshModelsBtn.addEventListener('click', async () => {
+          this.showToast('Refreshing models list from Groq API...');
+          const res = await api.fetchModels();
+          if (res.success) {
+            state.availableModels = res.models;
+            this.populateModelList(this.elements.modelSearchInput.value);
+            this.selectModel(state.settings.model);
+            this.showToast(`Fetched ${res.models.length} chat models from Groq.`);
+          } else {
+            this.showToast('Could not fetch models. Using default model list.');
+          }
+        });
+
+        // System Prompt Input
+        this.elements.systemPromptInput.addEventListener('input', (e) => {
+          state.settings.systemPrompt = e.target.value;
+          storage.saveSettings(state.settings);
+        });
+
+        // Temperature Slider & Number (Synchronized & Clamped 0 - 2)
+        this.elements.tempSlider.addEventListener('input', (e) => {
+          const val = parseFloat(e.target.value);
+          this.elements.tempNumber.value = val;
+          state.settings.temperature = val;
+          storage.saveSettings(state.settings);
+        });
+        this.elements.tempNumber.addEventListener('input', (e) => {
+          let val = parseFloat(e.target.value);
+          if (isNaN(val)) val = 1.0;
+          val = Math.max(0, Math.min(2, Math.round(val * 10) / 10));
+          this.elements.tempSlider.value = val;
+          state.settings.temperature = val;
+          storage.saveSettings(state.settings);
+        });
+
+        // Max Tokens Slider & Number (Synchronized & Clamped 1 - 32768)
+        this.elements.maxTokensSlider.addEventListener('input', (e) => {
+          const val = parseInt(e.target.value, 10);
+          this.elements.maxTokensNumber.value = val;
+          state.settings.maxTokens = val;
+          storage.saveSettings(state.settings);
+        });
+        this.elements.maxTokensNumber.addEventListener('input', (e) => {
+          let val = parseInt(e.target.value, 10);
+          if (isNaN(val) || val < 1) val = 1;
+          if (val > 32768) val = 32768;
+          this.elements.maxTokensSlider.value = Math.min(val, 8192);
+          state.settings.maxTokens = val;
+          storage.saveSettings(state.settings);
+        });
+
+        // Top P Slider & Number (Synchronized & Clamped 0 - 1)
+        this.elements.topPSlider.addEventListener('input', (e) => {
+          const val = parseFloat(e.target.value);
+          this.elements.topPNumber.value = val;
+          state.settings.topP = val;
+          storage.saveSettings(state.settings);
+        });
+        this.elements.topPNumber.addEventListener('input', (e) => {
+          let val = parseFloat(e.target.value);
+          if (isNaN(val)) val = 1.0;
+          val = Math.max(0, Math.min(1, Math.round(val * 100) / 100));
+          this.elements.topPSlider.value = val;
+          state.settings.topP = val;
+          storage.saveSettings(state.settings);
+        });
+
+        // Frequency Penalty Slider & Number (Synchronized & Clamped -2 to 2)
+        this.elements.freqPenaltySlider.addEventListener('input', (e) => {
+          const val = parseFloat(e.target.value);
+          this.elements.freqPenaltyNumber.value = val;
+          state.settings.frequencyPenalty = val;
+          storage.saveSettings(state.settings);
+        });
+        this.elements.freqPenaltyNumber.addEventListener('input', (e) => {
+          let val = parseFloat(e.target.value);
+          if (isNaN(val)) val = 0.0;
+          val = Math.max(-2, Math.min(2, Math.round(val * 10) / 10));
+          this.elements.freqPenaltySlider.value = val;
+          state.settings.frequencyPenalty = val;
+          storage.saveSettings(state.settings);
+        });
+
+        // Presence Penalty Slider & Number (Synchronized & Clamped -2 to 2)
+        this.elements.presPenaltySlider.addEventListener('input', (e) => {
+          const val = parseFloat(e.target.value);
+          this.elements.presPenaltyNumber.value = val;
+          state.settings.presencePenalty = val;
+          storage.saveSettings(state.settings);
+        });
+        this.elements.presPenaltyNumber.addEventListener('input', (e) => {
+          let val = parseFloat(e.target.value);
+          if (isNaN(val)) val = 0.0;
+          val = Math.max(-2, Math.min(2, Math.round(val * 10) / 10));
+          this.elements.presPenaltySlider.value = val;
+          state.settings.presencePenalty = val;
+          storage.saveSettings(state.settings);
+        });
+
+        // Stop Sequences Input (Validate max 4)
+        this.elements.stopSequencesInput.addEventListener('change', () => {
+          this.validateStopSequences(true);
+        });
+
+        // Seed Input (Integer)
+        this.elements.seedInput.addEventListener('input', (e) => {
+          const raw = e.target.value.trim();
+          if (raw === '') {
+            state.settings.seed = '';
+          } else {
+            const parsed = parseInt(raw, 10);
+            state.settings.seed = isNaN(parsed) ? '' : parsed;
+          }
+          storage.saveSettings(state.settings);
+        });
+
+        // Response Format
+        this.elements.responseFormatSelect.addEventListener('change', (e) => {
+          state.settings.responseFormat = e.target.value;
+          this.updateResponseFormatHint();
+          storage.saveSettings(state.settings);
+        });
+
+        // Reasoning Effort
+        this.elements.reasoningEffortSelect.addEventListener('change', (e) => {
+          state.settings.reasoningEffort = e.target.value;
+          storage.saveSettings(state.settings);
+        });
+
+        // Streaming Toggle Switch
+        this.elements.streamToggle.addEventListener('change', (e) => {
+          const isChecked = e.target.checked;
+          state.settings.stream = isChecked;
+          this.elements.streamHint.textContent = isChecked ? 'SSE streaming enabled.' : 'Non-streaming mode (waits for full response).';
+          storage.saveSettings(state.settings);
+          this.showToast(isChecked ? 'Streaming enabled.' : 'Non-streaming enabled.');
+        });
+
+        // Presets Select
+        this.elements.presetSelect.addEventListener('change', (e) => {
+          this.loadPreset(e.target.value);
+        });
+
+        // Save Preset Button
+        this.elements.savePresetBtn.addEventListener('click', () => {
+          this.saveCurrentPreset();
+        });
+
+        // Reset Defaults Button
+        this.elements.resetDefaultsBtn.addEventListener('click', () => {
+          this.resetDefaults();
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+          if (state.isModelDropdownOpen && !e.target.closest('.model-select-wrapper')) {
+            this.closeModelDropdown();
+          }
+        });
+
+        // Escape key closes modals, drawers, and model dropdown
         document.addEventListener('keydown', (e) => {
           if (e.key === 'Escape') {
+            if (state.isModelDropdownOpen) this.closeModelDropdown();
             if (state.isKeyModalOpen) this.closeModal();
             this.closeAllDrawers();
           }
@@ -2783,6 +4058,15 @@
           this.updateKeyStatus(true);
           this.showModalAlert('API key validated successfully! Ready for inference.', 'success');
           this.showToast('Groq API Key verified & saved.');
+
+          // Refresh models with the new valid key
+          api.fetchModels().then(mRes => {
+            if (mRes.success) {
+              state.availableModels = mRes.models;
+              this.populateModelList(this.elements.modelSearchInput.value);
+              this.selectModel(state.settings.model || DEFAULT_MODEL);
+            }
+          });
 
           setTimeout(() => {
             if (state.isKeyModalOpen) {
@@ -2811,6 +4095,11 @@
       ui.initMarkdown();
       ui.initTheme();
       ui.initScrollTracking();
+
+      // Load saved settings & presets
+      state.settings = storage.getSettings();
+      ui.renderCustomPresetsDropdown();
+      ui.syncSettingsToDOM();
       ui.bindEvents();
 
       // Check stored key
@@ -2822,9 +4111,13 @@
         ui.elements.apiKeyInput.value = stored.key;
         ui.updateKeyStatus(true);
 
-        // Background verification
-        api.validateKey(stored.key).then(res => {
-          ui.updateKeyStatus(res.success);
+        // Fetch live chat models from Groq API
+        api.fetchModels().then(mRes => {
+          if (mRes.success) {
+            state.availableModels = mRes.models;
+            ui.populateModelList('');
+            ui.selectModel(state.settings.model || DEFAULT_MODEL);
+          }
         });
       } else {
         ui.updateKeyStatus(false);
