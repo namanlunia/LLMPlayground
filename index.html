@@ -1,10 +1,27 @@
+<!--
+================================================================================
+DEPLOYMENT INSTRUCTIONS FOR VERCEL:
+1. Push this repository to GitHub: https://github.com/namanlunia/LLMPlayground.git
+2. Go to Vercel (https://vercel.com) and click "Add New..." -> "Project".
+3. Import your GitHub repository "LLMPlayground".
+4. Set Framework Preset to "Other".
+5. Leave Build Command and Output Directory completely empty.
+6. Click "Deploy".
+Your Groq Playground will be live instantly as a lightning-fast single-page app!
+================================================================================
+-->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Groq Playground</title>
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Groq Playground - Fast LLM Prototyping &amp; Chat</title>
+  <meta name="description" content="Ultra-fast Groq LLM playground with real-time SSE streaming, model parameter controls, chat history, and inference metrics.">
+  <meta name="theme-color" content="#090d16" id="metaThemeColor">
+
+  <!-- Inline SVG Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23F55036'%3E%3Cpolygon points='13 2 3 14 12 14 11 22 21 10 12 10 13 2'/%3E%3C/svg%3E">
+
   <!-- Google Fonts: Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,7 +47,8 @@
       
       --text-primary: #f8fafc;
       --text-secondary: #94a3b8;
-      --text-muted: #64748b;
+      --text-muted: #94a3b8; /* Enhanced contrast */
+      --text-faint: #64748b;
 
       --border-subtle: rgba(255, 255, 255, 0.08);
       --border-medium: rgba(255, 255, 255, 0.16);
@@ -44,7 +62,7 @@
 
       /* Status Colors */
       --status-valid: #10b981;
-      --status-none: #64748b;
+      --status-none: #94a3b8;
       --status-error: #ef4444;
       --status-error-bg: rgba(239, 68, 68, 0.12);
       --status-success-bg: rgba(16, 185, 129, 0.12);
@@ -79,7 +97,7 @@
       --chat-header-height: 46px;
       --sidebar-width: 260px;
       --settings-width: 320px;
-      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     /* Light Mode */
@@ -91,20 +109,21 @@
       --bg-input: #ffffff;
 
       --text-primary: #0f172a;
-      --text-secondary: #475569;
-      --text-muted: #94a3b8;
+      --text-secondary: #334155;
+      --text-muted: #475569;
+      --text-faint: #64748b;
 
       --border-subtle: rgba(0, 0, 0, 0.08);
       --border-medium: rgba(0, 0, 0, 0.16);
       --border-focus: rgba(245, 80, 54, 0.5);
 
-      --accent: #F55036;
-      --accent-hover: #e0442c;
-      --accent-subtle: rgba(245, 80, 54, 0.08);
+      --accent: #e0442c;
+      --accent-hover: #c93822;
+      --accent-subtle: rgba(245, 80, 54, 0.09);
       --accent-text: #ffffff;
 
       --status-valid: #059669;
-      --status-none: #94a3b8;
+      --status-none: #64748b;
       --status-error: #dc2626;
       --status-error-bg: rgba(220, 38, 38, 0.08);
       --status-success-bg: rgba(5, 150, 105, 0.08);
@@ -115,7 +134,7 @@
     }
 
     /* ==========================================================================
-       2. GLOBAL & RESET STYLES
+       2. GLOBAL RESET & ACCESSIBILITY FOCUS
        ========================================================================== */
     *, *::before, *::after {
       box-sizing: border-box;
@@ -133,7 +152,20 @@
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      overflow: hidden;
+      overflow-x: hidden;
+    }
+
+    /* Accessible Visible Focus Ring */
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    button:focus:not(:focus-visible),
+    input:focus:not(:focus-visible),
+    textarea:focus:not(:focus-visible),
+    select:focus:not(:focus-visible) {
+      outline: none;
     }
 
     button, input, textarea, select {
@@ -153,8 +185,21 @@
       text-decoration: underline;
     }
 
+    /* Screen Reader Only Utility */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
     /* ==========================================================================
-       3. LAYOUT: TOPBAR, SIDEBAR, CHAT, SETTINGS
+       3. APP SKELETON & TOPBAR
        ========================================================================== */
     .app-root {
       display: flex;
@@ -162,6 +207,7 @@
       height: 100vh;
       width: 100vw;
       background: var(--bg-base);
+      overflow: hidden;
     }
 
     /* Top Bar */
@@ -175,22 +221,34 @@
       padding: 0 var(--space-4);
       z-index: 30;
       flex-shrink: 0;
+      width: 100%;
     }
 
     .topbar-left {
       display: flex;
       align-items: center;
       gap: var(--space-3);
+      min-width: 0;
     }
 
     .mobile-menu-btn {
       display: none;
       background: transparent;
-      border: none;
+      border: 1px solid transparent;
       color: var(--text-secondary);
       cursor: pointer;
       padding: var(--space-1);
       border-radius: var(--radius-sm);
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      transition: all var(--transition);
+    }
+
+    .mobile-menu-btn:hover {
+      background-color: var(--bg-surface-elevated);
+      color: var(--text-primary);
     }
 
     .brand {
@@ -201,6 +259,7 @@
       font-size: 15px;
       color: var(--text-primary);
       user-select: none;
+      flex-shrink: 0;
     }
 
     .brand-logo {
@@ -213,6 +272,11 @@
       background: var(--accent);
       color: #ffffff;
       box-shadow: 0 2px 8px rgba(245, 80, 54, 0.35);
+      flex-shrink: 0;
+    }
+
+    .brand-title-short {
+      display: none;
     }
 
     .model-badge-placeholder {
@@ -229,6 +293,7 @@
       user-select: none;
       cursor: pointer;
       transition: all var(--transition);
+      white-space: nowrap;
     }
 
     .model-badge-placeholder:hover {
@@ -242,6 +307,7 @@
       height: 6px;
       border-radius: 50%;
       background-color: var(--accent);
+      flex-shrink: 0;
     }
 
     /* Running Session Token Counter Badge */
@@ -257,16 +323,19 @@
       font-family: var(--font-code);
       color: var(--text-secondary);
       user-select: none;
+      white-space: nowrap;
     }
 
     .session-tokens-badge svg {
       color: var(--accent);
+      flex-shrink: 0;
     }
 
     .topbar-right {
       display: flex;
       align-items: center;
       gap: var(--space-2);
+      flex-shrink: 0;
     }
 
     /* Key status dot & button */
@@ -289,6 +358,7 @@
       font-size: 13px;
       cursor: pointer;
       transition: all var(--transition);
+      white-space: nowrap;
     }
 
     .key-status-btn:hover {
@@ -303,7 +373,7 @@
       border-radius: 50%;
       background-color: var(--status-none);
       transition: background-color var(--transition);
-      box-shadow: 0 0 0 2px transparent;
+      flex-shrink: 0;
     }
 
     .key-dot.valid {
@@ -327,6 +397,7 @@
       color: var(--text-secondary);
       cursor: pointer;
       transition: all var(--transition);
+      flex-shrink: 0;
     }
 
     .icon-btn:hover {
@@ -350,10 +421,11 @@
       height: calc(100vh - var(--topbar-height));
       overflow: hidden;
       position: relative;
+      width: 100%;
     }
 
     /* ==========================================================================
-       LEFT SIDEBAR (MULTIPLE CONVERSATIONS HISTORY)
+       4. LEFT SIDEBAR & CONVERSATION LIST
        ========================================================================== */
     .sidebar {
       width: var(--sidebar-width);
@@ -364,6 +436,16 @@
       flex-shrink: 0;
       transition: transform var(--transition);
       z-index: 20;
+    }
+
+    .sidebar-drawer-header {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--border-subtle);
+      font-weight: 600;
+      font-size: 14px;
     }
 
     .sidebar-header {
@@ -460,6 +542,7 @@
       gap: 8px;
       overflow: hidden;
       flex: 1;
+      min-width: 0;
     }
 
     .chat-item-icon {
@@ -483,6 +566,7 @@
       display: none;
       align-items: center;
       gap: 2px;
+      flex-shrink: 0;
     }
 
     .chat-item:hover .chat-item-actions,
@@ -491,8 +575,8 @@
     }
 
     .chat-item-btn {
-      width: 22px;
-      height: 22px;
+      width: 24px;
+      height: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -545,7 +629,7 @@
     }
 
     /* ==========================================================================
-       CENTER CHAT AREA & HEADER TOOLBAR
+       5. CHAT MAIN AREA, HEADER TOOLBAR & EMPTY STATE
        ========================================================================== */
     .chat-main {
       flex: 1;
@@ -555,6 +639,7 @@
       background-color: var(--bg-base);
       overflow: hidden;
       min-width: 0;
+      position: relative;
     }
 
     /* Chat Header Toolbar (Active title, export, clear) */
@@ -616,6 +701,7 @@
       color: var(--text-secondary);
       cursor: pointer;
       transition: all var(--transition);
+      white-space: nowrap;
     }
 
     .chat-tool-btn:hover {
@@ -647,6 +733,12 @@
       flex-direction: column;
       min-width: 190px;
       overflow: hidden;
+      animation: menuFadeIn 0.15s ease-out;
+    }
+
+    @keyframes menuFadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .dropdown-item {
@@ -661,15 +753,17 @@
       cursor: pointer;
       text-align: left;
       transition: background-color var(--transition);
+      width: 100%;
     }
 
-    .dropdown-item:hover {
+    .dropdown-item:hover, .dropdown-item:focus-visible {
       background-color: var(--bg-surface-subtle);
     }
 
     .chat-scroll-area {
       flex: 1;
       overflow-y: auto;
+      overflow-x: hidden;
       display: flex;
       flex-direction: column;
       padding: var(--space-4) var(--space-4) var(--space-6);
@@ -766,7 +860,7 @@
     }
 
     /* ==========================================================================
-       MESSAGES, BUBBLES, ACTIONS & METRICS
+       6. MESSAGES, BUBBLES, ACTIONS, METRICS & RAW PANEL
        ========================================================================== */
     .messages-container {
       max-width: 820px;
@@ -783,7 +877,7 @@
       gap: var(--space-3);
       width: 100%;
       position: relative;
-      animation: messageFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: messageFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     @keyframes messageFadeIn {
@@ -839,6 +933,7 @@
       font-size: 14px;
       line-height: 1.6;
       word-break: break-word;
+      overflow-wrap: anywhere;
     }
 
     .message-row.user .message-bubble {
@@ -877,11 +972,12 @@
       display: flex;
       align-items: center;
       gap: 3px;
-      opacity: 0.65;
+      opacity: 0.7;
       transition: opacity var(--transition);
     }
 
-    .message-row:hover .message-actions-group {
+    .message-row:hover .message-actions-group,
+    .message-row:focus-within .message-actions-group {
       opacity: 1;
     }
 
@@ -889,7 +985,7 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 2px 6px;
+      padding: 3px 7px;
       border-radius: var(--radius-sm);
       background: transparent;
       border: 1px solid transparent;
@@ -933,7 +1029,7 @@
 
     .metric-tag.speed {
       color: var(--accent);
-      border-color: rgba(245, 80, 54, 0.2);
+      border-color: rgba(245, 80, 54, 0.25);
       font-weight: 500;
     }
 
@@ -972,7 +1068,7 @@
       display: flex;
       flex-direction: column;
       gap: var(--space-3);
-      background-color: #0c111c;
+      background-color: rgba(0, 0, 0, 0.2);
     }
 
     .raw-section {
@@ -1010,6 +1106,8 @@
       line-height: 1.65;
       color: var(--text-primary);
       width: 100%;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
 
     .markdown-body p {
@@ -1033,9 +1131,9 @@
       margin-top: 0;
     }
 
-    .markdown-body h1 { font-size: 1.4em; }
-    .markdown-body h2 { font-size: 1.25em; }
-    .markdown-body h3 { font-size: 1.1em; }
+    .markdown-body h1 { font-size: 1.35em; }
+    .markdown-body h2 { font-size: 1.2em; }
+    .markdown-body h3 { font-size: 1.05em; }
 
     .markdown-body ul, .markdown-body ol {
       padding-left: var(--space-5);
@@ -1072,6 +1170,8 @@
       width: 100%;
       margin: var(--space-3) 0;
       font-size: 13px;
+      overflow-x: auto;
+      display: block;
     }
 
     .markdown-body th, .markdown-body td {
@@ -1093,6 +1193,7 @@
       border: 1px solid var(--border-subtle);
       background-color: #111827;
       box-shadow: var(--shadow-sm);
+      max-width: 100%;
     }
 
     .code-block-header {
@@ -1122,7 +1223,7 @@
     }
 
     .code-copy-btn:hover {
-      background-color: rgba(255, 255, 255, 0.12);
+      background-color: rgba(255, 255, 255, 0.14);
       color: #ffffff;
     }
 
@@ -1267,7 +1368,9 @@
       margin-top: var(--space-2);
     }
 
-    /* Message Input Bar */
+    /* ==========================================================================
+       7. CHAT INPUT BAR & ACTIONS
+       ========================================================================== */
     .chat-input-container {
       padding: var(--space-3) var(--space-4) var(--space-4);
       max-width: 820px;
@@ -1360,7 +1463,7 @@
     }
 
     /* ==========================================================================
-       RIGHT SETTINGS PANEL (CONTROLS & PARAMETERS)
+       8. RIGHT SETTINGS PANEL & CONTROLS
        ========================================================================== */
     .settings-panel {
       width: var(--settings-width);
@@ -1529,7 +1632,7 @@
       transition: border-color var(--transition);
     }
 
-    .model-select-trigger:hover, .model-select-trigger:focus {
+    .model-select-trigger:hover {
       border-color: var(--accent);
     }
 
@@ -1538,6 +1641,7 @@
       flex-direction: column;
       gap: 2px;
       overflow: hidden;
+      min-width: 0;
     }
 
     .selected-model-name {
@@ -1568,7 +1672,7 @@
 
     .meta-badge.ctx {
       color: var(--accent);
-      border-color: rgba(245, 80, 54, 0.2);
+      border-color: rgba(245, 80, 54, 0.25);
     }
 
     .model-dropdown-menu {
@@ -1585,6 +1689,7 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      animation: menuFadeIn 0.15s ease-out;
     }
 
     .model-search-header {
@@ -1594,6 +1699,7 @@
       align-items: center;
       gap: var(--space-2);
       background-color: var(--bg-surface);
+      flex-shrink: 0;
     }
 
     .model-search-input {
@@ -1623,7 +1729,7 @@
       transition: background-color var(--transition);
     }
 
-    .model-list-item:hover {
+    .model-list-item:hover, .model-list-item:focus-visible {
       background-color: var(--bg-surface-subtle);
     }
 
@@ -1644,6 +1750,38 @@
       font-size: 10px;
       color: var(--text-muted);
       margin-top: 2px;
+    }
+
+    /* Model Loading Skeletons */
+    .model-skeleton-item {
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .skeleton-line {
+      height: 10px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(90deg, var(--bg-surface-subtle) 25%, var(--bg-surface-elevated) 50%, var(--bg-surface-subtle) 75%);
+      background-size: 200% 100%;
+      animation: skeletonShimmer 1.5s infinite;
+    }
+
+    .skeleton-line.title {
+      width: 65%;
+      height: 12px;
+    }
+
+    .skeleton-line.sub {
+      width: 40%;
+      height: 8px;
+    }
+
+    @keyframes skeletonShimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
     }
 
     /* Slider & Number Input Pair */
@@ -1778,9 +1916,9 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.65);
       backdrop-filter: blur(4px);
-      z-index: 15;
+      z-index: 45;
     }
 
     .drawer-backdrop.active {
@@ -1788,7 +1926,7 @@
     }
 
     /* ==========================================================================
-       4. API KEY MODAL (BYOK)
+       9. MODALS, FOCUS TRAP & TOAST NOTIFICATIONS
        ========================================================================== */
     .modal-overlay {
       position: fixed;
@@ -2111,9 +2249,10 @@
       align-items: center;
       gap: var(--space-2);
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(12px);
       transition: all var(--transition);
       pointer-events: none;
+      max-width: 90vw;
     }
 
     .toast.show {
@@ -2123,26 +2262,28 @@
     }
 
     /* ==========================================================================
-       5. RESPONSIVE DESIGN (MOBILE & TABLET DRAWERS)
+       10. RESPONSIVE DESIGN (360px, 768px, 1024px, 1280px+)
        ========================================================================== */
     @media (max-width: 1024px) {
-      .prompt-cards-grid {
-        grid-template-columns: 1fr;
+      .mobile-menu-btn {
+        display: flex;
       }
 
-      .mobile-menu-btn {
+      .sidebar-drawer-header {
         display: flex;
       }
 
       /* Sidebar becomes slide-out drawer */
       .sidebar {
         position: fixed;
-        top: var(--topbar-height);
+        top: 0;
         bottom: 0;
         left: 0;
         width: 280px;
+        max-width: 85vw;
         transform: translateX(-100%);
         box-shadow: var(--shadow-lg);
+        z-index: 50;
       }
 
       .sidebar.open {
@@ -2152,17 +2293,23 @@
       /* Settings panel becomes slide-out drawer */
       .settings-panel {
         position: fixed;
-        top: var(--topbar-height);
+        top: 0;
         bottom: 0;
         right: 0;
         width: 320px;
+        max-width: 90vw;
         transform: translateX(100%);
         margin-right: 0 !important;
         box-shadow: var(--shadow-lg);
+        z-index: 50;
       }
 
       .settings-panel.open {
         transform: translateX(0);
+      }
+
+      .prompt-cards-grid {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -2170,8 +2317,14 @@
       .model-badge-placeholder {
         display: none;
       }
-      .brand-title {
-        font-size: 14px;
+      .session-tokens-badge {
+        display: none;
+      }
+      .brand-title-full {
+        display: none;
+      }
+      .brand-title-short {
+        display: inline;
       }
       .empty-title {
         font-size: 22px;
@@ -2182,21 +2335,36 @@
       .message-bubble-wrapper {
         max-width: 92%;
       }
-      .session-tokens-badge {
+    }
+
+    @media (max-width: 400px) {
+      .topbar {
+        padding: 0 var(--space-2);
+      }
+      .key-status-label {
         display: none;
+      }
+      .key-status-btn {
+        padding: 0 var(--space-2);
+      }
+      .message-bubble-wrapper {
+        max-width: 95%;
       }
     }
   </style>
 </head>
 <body>
-  <div class="app-root">
+  <!-- Hidden Screen Reader Live Region -->
+  <div id="srLiveStatus" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <div class="app-root" id="appRoot">
     
     <!-- TOP BAR -->
-    <header class="topbar">
+    <header class="topbar" role="banner">
       <div class="topbar-left">
         <!-- Mobile Sidebar Toggle -->
-        <button id="mobileSidebarToggle" class="mobile-menu-btn" title="Toggle Menu" aria-label="Toggle Menu">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="mobileSidebarToggle" class="mobile-menu-btn" title="Toggle Navigation Menu" aria-label="Toggle Navigation Menu" aria-expanded="false" aria-controls="leftSidebar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <line x1="3" y1="12" x2="21" y2="12"></line>
             <line x1="3" y1="6" x2="21" y2="6"></line>
             <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -2210,34 +2378,35 @@
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
             </svg>
           </div>
-          <span class="brand-title">Groq Playground</span>
+          <span class="brand-title brand-title-full">Groq Playground</span>
+          <span class="brand-title brand-title-short">Groq</span>
         </div>
 
         <!-- Model Badge in Top Bar (Clickable shortcut to settings) -->
-        <div class="model-badge-placeholder" id="topModelBadge" title="Click to view model parameters">
-          <span class="badge-icon"></span>
+        <button type="button" class="model-badge-placeholder" id="topModelBadge" title="Click to view model parameters" aria-label="Active Model: llama-3.3-70b-versatile. Click to configure parameters.">
+          <span class="badge-icon" aria-hidden="true"></span>
           <span id="currentModelLabel">llama-3.3-70b-versatile</span>
-        </div>
+        </button>
 
         <!-- Session Tokens Total Counter Badge -->
-        <div class="session-tokens-badge" id="sessionTokensBadge" title="Total tokens used in this browser session">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <div class="session-tokens-badge" id="sessionTokensBadge" title="Total tokens used in this browser session" aria-label="Session token usage">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
           </svg>
-          <span id="sessionTokensCount">0</span> tokens
+          <span id="sessionTokensCount">0</span>&nbsp;tokens
         </div>
       </div>
 
       <div class="topbar-right">
         <!-- Key Status Button & Dot -->
         <div class="key-status-group">
-          <button id="keyStatusBtn" class="key-status-btn" title="Groq API Key Settings">
+          <button id="keyStatusBtn" class="key-status-btn" title="Groq API Key Settings" aria-label="Groq API Key Settings">
             <span id="keyStatusDot" class="key-dot none" aria-hidden="true"></span>
-            <span id="keyStatusLabel">No API Key</span>
+            <span id="keyStatusLabel" class="key-status-label">No API Key</span>
           </button>
           
-          <button id="quickRemoveKeyBtn" class="icon-btn remove-key-btn" title="Remove Groq API Key" style="display: none;" aria-label="Remove API Key">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button id="quickRemoveKeyBtn" class="icon-btn remove-key-btn" title="Remove Groq API Key" style="display: none;" aria-label="Remove Groq API Key">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
             </svg>
@@ -2245,8 +2414,8 @@
         </div>
 
         <!-- Settings Panel Toggle -->
-        <button id="toggleSettingsBtn" class="icon-btn" title="Toggle Model Parameters" aria-label="Toggle Model Parameters">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="toggleSettingsBtn" class="icon-btn" title="Toggle Model Parameters" aria-label="Toggle Model Parameters Panel" aria-expanded="false" aria-controls="rightSettings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <line x1="4" y1="21" x2="4" y2="14"></line>
             <line x1="4" y1="10" x2="4" y2="3"></line>
             <line x1="12" y1="21" x2="12" y2="12"></line>
@@ -2260,11 +2429,11 @@
         </button>
 
         <!-- Theme Toggle -->
-        <button id="themeToggleBtn" class="icon-btn" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">
-          <svg id="themeIconDark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="themeToggleBtn" class="icon-btn" title="Toggle Light/Dark Theme" aria-label="Toggle Light/Dark Theme">
+          <svg id="themeIconDark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
           </svg>
-          <svg id="themeIconLight" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+          <svg id="themeIconLight" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;" aria-hidden="true">
             <circle cx="12" cy="12" r="5"></circle>
             <line x1="12" y1="1" x2="12" y2="3"></line>
             <line x1="12" y1="21" x2="12" y2="23"></line>
@@ -2282,13 +2451,23 @@
     <!-- APP BODY -->
     <div class="app-body">
       <!-- Backdrop for mobile drawers -->
-      <div id="drawerBackdrop" class="drawer-backdrop"></div>
+      <div id="drawerBackdrop" class="drawer-backdrop" aria-hidden="true"></div>
 
       <!-- LEFT SIDEBAR (CHAT HISTORY) -->
-      <aside id="leftSidebar" class="sidebar">
+      <aside id="leftSidebar" class="sidebar" aria-label="Conversation History">
+        <div class="sidebar-drawer-header">
+          <span>Conversations</span>
+          <button id="closeSidebarBtn" class="icon-btn" title="Close Conversations Drawer" aria-label="Close Conversations Drawer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
         <div class="sidebar-header">
-          <button class="new-chat-btn" id="newChatBtn" title="Start New Conversation">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button class="new-chat-btn" id="newChatBtn" title="Start New Conversation" aria-label="Start New Conversation">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
@@ -2298,9 +2477,9 @@
 
         <div class="sidebar-content">
           <span class="sidebar-section-title">Chat History</span>
-          <div id="chatHistoryList" class="chat-history-list"></div>
+          <nav id="chatHistoryList" class="chat-history-list" aria-label="Past conversations"></nav>
           <div id="historyEmptyState" class="history-empty-state" style="display: none;">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
             <p><strong>No saved conversations</strong><br>Start typing to auto-save chats.</p>
@@ -2309,12 +2488,12 @@
 
         <div class="sidebar-footer">
           <span>Groq LPU™ Engine</span>
-          <span style="color: var(--accent); font-weight: 500;">Phase 4</span>
+          <span style="color: var(--accent); font-weight: 500;">Online</span>
         </div>
       </aside>
 
       <!-- CENTER CHAT AREA -->
-      <main class="chat-main">
+      <main class="chat-main" role="main">
         <!-- Chat Header Bar (Active conversation toolbar, export, clear) -->
         <div class="chat-header-bar">
           <div class="chat-header-title-group">
@@ -2325,29 +2504,29 @@
           <div class="chat-header-actions">
             <!-- Export Dropdown -->
             <div class="dropdown-wrapper">
-              <button type="button" id="exportDropdownBtn" class="chat-tool-btn" title="Export conversation">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <button type="button" id="exportDropdownBtn" class="chat-tool-btn" title="Export conversation" aria-haspopup="true" aria-expanded="false" aria-controls="exportMenu">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="7 10 12 15 17 10"></polyline>
                   <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
                 <span>Export</span>
               </button>
-              <div id="exportMenu" class="dropdown-menu" style="display: none;">
-                <button type="button" id="exportMarkdownBtn" class="dropdown-item">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <div id="exportMenu" class="dropdown-menu" style="display: none;" role="menu">
+                <button type="button" id="exportMarkdownBtn" class="dropdown-item" role="menuitem">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                   <span>Export Markdown (.md)</span>
                 </button>
-                <button type="button" id="exportJsonBtn" class="dropdown-item">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                <button type="button" id="exportJsonBtn" class="dropdown-item" role="menuitem">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
                   <span>Export JSON (.json)</span>
                 </button>
               </div>
             </div>
 
             <!-- Clear Chat Action -->
-            <button type="button" id="clearChatBtn" class="chat-tool-btn danger" title="Clear all messages in this conversation">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button type="button" id="clearChatBtn" class="chat-tool-btn danger" title="Clear all messages in this conversation" aria-label="Clear all messages in this conversation">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <polyline points="3 6 5 6 21 6"></polyline>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
               </svg>
@@ -2370,21 +2549,21 @@
               Experience near-instant LLM generation powered by Groq's Language Processing Units. Select or configure parameters on the right, connect your key, and start chatting.
             </p>
 
-            <div class="prompt-cards-grid">
-              <button class="prompt-card" data-prompt="Explain quantum computing and qubit superposition using a simple analogy for a high school student.">
-                <span class="prompt-card-icon">⚡</span>
+            <div class="prompt-cards-grid" role="region" aria-label="Sample Prompts">
+              <button type="button" class="prompt-card" data-prompt="Explain quantum computing and qubit superposition using a simple analogy for a high school student.">
+                <span class="prompt-card-icon" aria-hidden="true">⚡</span>
                 <span class="prompt-card-title">Explain quantum computing</span>
                 <span class="prompt-card-desc">Explain qubits and superposition using a clear everyday analogy.</span>
               </button>
 
-              <button class="prompt-card" data-prompt="Write a high-performance Python FastAPI service with Pydantic v2 validation and async SQLite support.">
-                <span class="prompt-card-icon">💻</span>
+              <button type="button" class="prompt-card" data-prompt="Write a high-performance Python FastAPI service with Pydantic v2 validation and async SQLite support.">
+                <span class="prompt-card-icon" aria-hidden="true">💻</span>
                 <span class="prompt-card-title">FastAPI Microservice</span>
                 <span class="prompt-card-desc">Production-grade async boilerplate with schema validation.</span>
               </button>
 
-              <button class="prompt-card" data-prompt="Analyze common bottlenecks in PostgreSQL multi-table joins and explain EXPLAIN ANALYZE output.">
-                <span class="prompt-card-icon">🔍</span>
+              <button type="button" class="prompt-card" data-prompt="Analyze common bottlenecks in PostgreSQL multi-table joins and explain EXPLAIN ANALYZE output.">
+                <span class="prompt-card-icon" aria-hidden="true">🔍</span>
                 <span class="prompt-card-title">Debug SQL Query Plan</span>
                 <span class="prompt-card-desc">Identify indexing bottlenecks and parse EXPLAIN ANALYZE cost trees.</span>
               </button>
@@ -2392,15 +2571,15 @@
           </div>
 
           <!-- Messages Stream Container -->
-          <div class="messages-container" id="messagesContainer" style="display: none;"></div>
+          <div class="messages-container" id="messagesContainer" style="display: none;" role="log" aria-label="Chat messages"></div>
         </div>
 
         <!-- Bottom message input bar -->
         <div class="chat-input-container">
           <!-- Floating Stop Generating button -->
           <div class="chat-stop-container" id="chatStopContainer" style="display: none;">
-            <button id="stopGenBtn" class="stop-gen-btn" title="Stop current response generation">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+            <button type="button" id="stopGenBtn" class="stop-gen-btn" title="Stop current response generation" aria-label="Stop current response generation">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <rect x="4" y="4" width="16" height="16" rx="2"></rect>
               </svg>
               <span>Stop generating</span>
@@ -2408,11 +2587,12 @@
           </div>
 
           <div class="chat-input-box" id="chatInputBox">
+            <label for="messageInput" class="sr-only">Message Prompt</label>
             <textarea id="messageInput" class="chat-textarea" placeholder="Type a message... (Enter to send, Shift+Enter for newline)" rows="1"></textarea>
             <div class="chat-input-actions">
               <span class="input-hint">Enter to send • Shift+Enter for new line</span>
-              <button id="sendBtn" class="send-btn" disabled title="Send message" aria-label="Send message">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <button type="button" id="sendBtn" class="send-btn" disabled title="Send message" aria-label="Send message">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <line x1="22" y1="2" x2="11" y2="13"></line>
                   <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                 </svg>
@@ -2424,11 +2604,11 @@
       </main>
 
       <!-- RIGHT SETTINGS PANEL (WIRED PARAMETERS & PRESETS) -->
-      <aside id="rightSettings" class="settings-panel">
+      <aside id="rightSettings" class="settings-panel" aria-label="Model Parameters">
         <div class="settings-header">
           <span>Parameters</span>
-          <button id="closeSettingsBtn" class="icon-btn" title="Collapse Settings" aria-label="Collapse Settings">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button type="button" id="closeSettingsBtn" class="icon-btn" title="Close Parameters Panel" aria-label="Close Parameters Panel">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
@@ -2438,6 +2618,7 @@
         <div class="settings-body">
           <!-- Presets Bar -->
           <div class="presets-toolbar">
+            <label for="presetSelect" class="sr-only">Load Preset</label>
             <select id="presetSelect" class="preset-select" title="Load Preset">
               <option value="" disabled selected>Load Preset...</option>
               <optgroup label="Built-in Presets">
@@ -2458,16 +2639,16 @@
               <span class="setting-label-left">
                 <span>Model</span>
                 <span class="info-tooltip" data-tooltip="Groq LPU chat completion model. Filtered to chat-compatible models.">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 </span>
               </span>
-              <button type="button" id="refreshModelsBtn" class="icon-btn" style="width: 20px; height: 20px;" title="Refresh models from Groq API">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+              <button type="button" id="refreshModelsBtn" class="icon-btn" style="width: 20px; height: 20px;" title="Refresh models from Groq API" aria-label="Refresh models list from Groq API">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
               </button>
             </div>
 
             <div class="model-select-wrapper">
-              <button type="button" id="modelSelectTrigger" class="model-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+              <button type="button" id="modelSelectTrigger" class="model-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="modelDropdownMenu">
                 <div class="model-select-info">
                   <span id="selectedModelName" class="selected-model-name">llama-3.3-70b-versatile</span>
                   <div class="selected-model-badges">
@@ -2475,14 +2656,15 @@
                     <span id="selectedModelCtx" class="meta-badge ctx">128k ctx</span>
                   </div>
                 </div>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </button>
 
-              <div id="modelDropdownMenu" class="model-dropdown-menu" style="display: none;">
+              <div id="modelDropdownMenu" class="model-dropdown-menu" style="display: none;" role="listbox">
                 <div class="model-search-header">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  <label for="modelSearchInput" class="sr-only">Search models</label>
                   <input type="text" id="modelSearchInput" class="model-search-input" placeholder="Search models by name or owner..." autocomplete="off">
                 </div>
                 <div id="modelListContainer" class="model-list-container"></div>
@@ -2494,12 +2676,12 @@
           <!-- System Prompt -->
           <div class="setting-item">
             <div class="setting-label-row">
-              <span class="setting-label-left">
+              <label for="systemPromptInput" class="setting-label-left">
                 <span>System Prompt</span>
                 <span class="info-tooltip" data-tooltip="Instruction to guide the model's behavior, persona, and output style.">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 </span>
-              </span>
+              </label>
             </div>
             <textarea id="systemPromptInput" class="param-textarea" placeholder="You are a helpful and ultra-fast AI assistant running on Groq LPUs..."></textarea>
             <span class="param-hint">Optional. Sent as system message when set.</span>
@@ -2508,16 +2690,16 @@
           <!-- Temperature -->
           <div class="setting-item">
             <div class="setting-label-row">
-              <span class="setting-label-left">
+              <label for="tempSlider" class="setting-label-left">
                 <span>Temperature</span>
                 <span class="info-tooltip" data-tooltip="Controls randomness. Lower values are more deterministic and focused; higher values are more creative.">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 </span>
-              </span>
+              </label>
             </div>
             <div class="slider-number-row">
-              <input type="range" id="tempSlider" class="param-slider" min="0" max="2" step="0.1" value="1.0">
-              <input type="number" id="tempNumber" class="param-number-input" min="0" max="2" step="0.1" value="1.0">
+              <input type="range" id="tempSlider" class="param-slider" min="0" max="2" step="0.1" value="1.0" aria-label="Temperature slider">
+              <input type="number" id="tempNumber" class="param-number-input" min="0" max="2" step="0.1" value="1.0" aria-label="Temperature value">
             </div>
             <span class="param-hint">Range 0.0 (focused) – 2.0 (creative).</span>
           </div>
@@ -2525,16 +2707,16 @@
           <!-- Max Completion Tokens -->
           <div class="setting-item">
             <div class="setting-label-row">
-              <span class="setting-label-left">
+              <label for="maxTokensSlider" class="setting-label-left">
                 <span>Max Completion Tokens</span>
                 <span class="info-tooltip" data-tooltip="Upper bound for tokens generated in the completion (sent as max_completion_tokens).">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 </span>
-              </span>
+              </label>
             </div>
             <div class="slider-number-row">
-              <input type="range" id="maxTokensSlider" class="param-slider" min="1" max="8192" step="64" value="4096">
-              <input type="number" id="maxTokensNumber" class="param-number-input" min="1" max="32768" step="1" value="4096">
+              <input type="range" id="maxTokensSlider" class="param-slider" min="1" max="8192" step="64" value="4096" aria-label="Max completion tokens slider">
+              <input type="number" id="maxTokensNumber" class="param-number-input" min="1" max="32768" step="1" value="4096" aria-label="Max completion tokens value">
             </div>
             <span class="param-hint">Sent as max_completion_tokens (1 – context limit).</span>
           </div>
@@ -2542,16 +2724,16 @@
           <!-- Top P -->
           <div class="setting-item">
             <div class="setting-label-row">
-              <span class="setting-label-left">
+              <label for="topPSlider" class="setting-label-left">
                 <span>Top P</span>
                 <span class="info-tooltip" data-tooltip="Nucleus sampling. The model considers only tokens comprising the top P probability mass.">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 </span>
-              </span>
+              </label>
             </div>
             <div class="slider-number-row">
-              <input type="range" id="topPSlider" class="param-slider" min="0" max="1" step="0.05" value="1.0">
-              <input type="number" id="topPNumber" class="param-number-input" min="0" max="1" step="0.01" value="1.0">
+              <input type="range" id="topPSlider" class="param-slider" min="0" max="1" step="0.05" value="1.0" aria-label="Top P slider">
+              <input type="number" id="topPNumber" class="param-number-input" min="0" max="1" step="0.01" value="1.0" aria-label="Top P value">
             </div>
             <span class="param-hint">Range 0.0 – 1.0 (1.0 = consider all tokens).</span>
           </div>
@@ -2559,16 +2741,16 @@
           <!-- Frequency Penalty -->
           <div class="setting-item">
             <div class="setting-label-row">
-              <span class="setting-label-left">
+              <label for="freqPenaltySlider" class="setting-label-left">
                 <span>Frequency Penalty</span>
                 <span class="info-tooltip" data-tooltip="Penalizes tokens based on frequency in text so far, decreasing verbatim repetition.">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 </span>
-              </span>
+              </label>
             </div>
             <div class="slider-number-row">
-              <input type="range" id="freqPenaltySlider" class="param-slider" min="-2" max="2" step="0.1" value="0.0">
-              <input type="number" id="freqPenaltyNumber" class="param-number-input" min="-2" max="2" step="0.1" value="0.0">
+              <input type="range" id="freqPenaltySlider" class="param-slider" min="-2" max="2" step="0.1" value="0.0" aria-label="Frequency penalty slider">
+              <input type="number" id="freqPenaltyNumber" class="param-number-input" min="-2" max="2" step="0.1" value="0.0" aria-label="Frequency penalty value">
             </div>
             <span class="param-hint">Range -2.0 to 2.0 (default 0.0).</span>
           </div>
@@ -2576,16 +2758,16 @@
           <!-- Presence Penalty -->
           <div class="setting-item">
             <div class="setting-label-row">
-              <span class="setting-label-left">
+              <label for="presPenaltySlider" class="setting-label-left">
                 <span>Presence Penalty</span>
                 <span class="info-tooltip" data-tooltip="Penalizes tokens based on presence in text so far, encouraging topic introduction.">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 </span>
-              </span>
+              </label>
             </div>
             <div class="slider-number-row">
-              <input type="range" id="presPenaltySlider" class="param-slider" min="-2" max="2" step="0.1" value="0.0">
-              <input type="number" id="presPenaltyNumber" class="param-number-input" min="-2" max="2" step="0.1" value="0.0">
+              <input type="range" id="presPenaltySlider" class="param-slider" min="-2" max="2" step="0.1" value="0.0" aria-label="Presence penalty slider">
+              <input type="number" id="presPenaltyNumber" class="param-number-input" min="-2" max="2" step="0.1" value="0.0" aria-label="Presence penalty value">
             </div>
             <span class="param-hint">Range -2.0 to 2.0 (default 0.0).</span>
           </div>
@@ -2593,12 +2775,12 @@
           <!-- Stop Sequences -->
           <div class="setting-item">
             <div class="setting-label-row">
-              <span class="setting-label-left">
+              <label for="stopSequencesInput" class="setting-label-left">
                 <span>Stop Sequences</span>
                 <span class="info-tooltip" data-tooltip="Up to 4 sequences where generation will stop automatically.">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 </span>
-              </span>
+              </label>
             </div>
             <input type="text" id="stopSequencesInput" class="param-text-input" placeholder="e.g. END, ###, Stop">
             <span class="param-hint" id="stopHint">Comma-separated (max 4).</span>
@@ -2607,12 +2789,12 @@
           <!-- Seed -->
           <div class="setting-item">
             <div class="setting-label-row">
-              <span class="setting-label-left">
+              <label for="seedInput" class="setting-label-left">
                 <span>Seed</span>
                 <span class="info-tooltip" data-tooltip="Optional integer for best-effort deterministic sampling.">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 </span>
-              </span>
+              </label>
             </div>
             <input type="number" id="seedInput" class="param-text-input" placeholder="e.g. 42 (blank for random)" step="1">
             <span class="param-hint">Integer for reproducibility.</span>
@@ -2621,12 +2803,12 @@
           <!-- Response Format -->
           <div class="setting-item">
             <div class="setting-label-row">
-              <span class="setting-label-left">
+              <label for="responseFormatSelect" class="setting-label-left">
                 <span>Response Format</span>
                 <span class="info-tooltip" data-tooltip="Enables JSON mode (guarantees valid JSON). Prompt must also instruct the model to output JSON.">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 </span>
-              </span>
+              </label>
             </div>
             <select id="responseFormatSelect" class="param-select">
               <option value="text">Default (Text)</option>
@@ -2638,12 +2820,12 @@
           <!-- Reasoning Effort (Visible only for reasoning models) -->
           <div class="setting-item" id="reasoningEffortContainer" style="display: none;">
             <div class="setting-label-row">
-              <span class="setting-label-left">
+              <label for="reasoningEffortSelect" class="setting-label-left">
                 <span>Reasoning Effort</span>
                 <span class="info-tooltip" data-tooltip="Constrains thinking budget on reasoning-capable models (e.g. DeepSeek-R1).">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 </span>
-              </span>
+              </label>
             </div>
             <select id="reasoningEffortSelect" class="param-select">
               <option value="low">Low</option>
@@ -2659,7 +2841,7 @@
               <span class="setting-label-left">
                 <span>Stream Response</span>
                 <span class="info-tooltip" data-tooltip="Real-time SSE token streaming. Turn off to receive the full message once completed.">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 </span>
               </span>
               <div class="switch-wrapper">
@@ -2677,19 +2859,19 @@
   </div>
 
   <!-- API KEY MODAL (BYOK) -->
-  <div id="apiKeyModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div id="apiKeyModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-header">
         <div class="modal-title-group">
-          <div class="modal-icon-badge">
+          <div class="modal-icon-badge" aria-hidden="true">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 2l-2 2m-1.5 1.5L16 7l-2-2m-1.5 1.5L11 8l-2-2m0 0a5 5 0 1 0-7 7l9 9a2.5 2.5 0 0 0 3.5 0l5.5-5.5a2.5 2.5 0 0 0 0-3.5L13 6z"></path>
             </svg>
           </div>
           <h2 id="modalTitle" class="modal-title">Groq API Key</h2>
         </div>
-        <button id="modalCloseBtn" class="modal-close-btn" title="Close Dialog" aria-label="Close Dialog">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button type="button" id="modalCloseBtn" class="modal-close-btn" title="Close Dialog" aria-label="Close Dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
@@ -2706,7 +2888,7 @@
             <label for="apiKeyInput" class="input-label">API Key</label>
             <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" class="input-sublink">
               Get an API key
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                 <polyline points="15 3 21 3 21 9"></polyline>
                 <line x1="10" y1="14" x2="21" y2="3"></line>
@@ -2718,12 +2900,12 @@
             <input type="password" id="apiKeyInput" class="text-input" placeholder="gsk_..." autocomplete="off" spellcheck="false">
             <button type="button" id="toggleKeyVisibilityBtn" class="toggle-password-btn" title="Show or hide key" aria-label="Toggle password visibility">
               <!-- Eye Icon -->
-              <svg id="eyeIconShow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg id="eyeIconShow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                 <circle cx="12" cy="12" r="3"></circle>
               </svg>
               <!-- Eye Off Icon -->
-              <svg id="eyeIconHide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+              <svg id="eyeIconHide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;" aria-hidden="true">
                 <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                 <line x1="1" y1="1" x2="23" y2="23"></line>
               </svg>
@@ -2740,10 +2922,10 @@
         </label>
 
         <!-- Feedback Alert Box -->
-        <div id="keyAlert" class="alert-box" style="display: none;"></div>
+        <div id="keyAlert" class="alert-box" style="display: none;" role="alert"></div>
 
         <div class="privacy-note">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
           </svg>
@@ -2754,7 +2936,7 @@
       <div class="modal-footer">
         <button type="button" id="modalRemoveKeyBtn" class="btn-danger-outline" style="display: none;">Remove key</button>
         <button type="button" id="validateKeyBtn" class="btn-primary">
-          <span id="validateSpinner" class="spinner" style="display: none;"></span>
+          <span id="validateSpinner" class="spinner" style="display: none;" aria-hidden="true"></span>
           <span id="validateBtnText">Validate &amp; Save</span>
         </button>
       </div>
@@ -2763,16 +2945,18 @@
 
   <!-- TOAST NOTIFICATION -->
   <div id="toast" class="toast" role="status" aria-live="polite">
+    <span id="toastIcon" aria-hidden="true">✓</span>
     <span id="toastMessage"></span>
   </div>
 
   <!-- ==========================================================================
-       6. JAVASCRIPT LOGIC
+       11. JAVASCRIPT LOGIC
        - Constants, Defaults & Presets
        - State
        - Storage (Conversations, Active Chat, Settings, Keys)
+       - Utilities & Sanitization
        - API (Models Fetch, Chat Completion & Streaming with Usage)
-       - UI (Chat history, Message rendering with Actions, Metrics & Developer panel)
+       - UI (Focus trap, Drawers, Chat History, Messages, Skeletons, Settings)
        - Initialization
        ========================================================================== */
   <script>
@@ -2871,10 +3055,10 @@
       isGenerating: false,
       abortController: null,
       sessionTokens: 0,
-      conversations: [], // Array of Conversation objects
+      conversations: [],
       activeConversationId: null,
       availableModels: [...FALLBACK_MODELS],
-      messages: [], // Current active chat messages cache
+      messages: [],
       settings: { ...DEFAULT_SETTINGS }
     };
 
@@ -2996,8 +3180,18 @@
     };
 
     /* --------------------------------------------------------------------------
-       HELPERS & MODEL UTILITIES
+       HELPERS & SECURITY UTILITIES
        -------------------------------------------------------------------------- */
+    function escapeHtml(str) {
+      if (typeof str !== 'string') return '';
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     function generateId(prefix = 'id') {
       return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     }
@@ -3053,7 +3247,7 @@
       URL.revokeObjectURL(url);
     }
 
-    // Build API payload including parameters only when valid / set
+    // Build API payload including parameters only when valid or differing from defaults
     function buildChatPayload(messages, settings, isStream = true) {
       const fullMessages = [];
       if (settings.systemPrompt && settings.systemPrompt.trim()) {
@@ -3341,10 +3535,14 @@
     const ui = {
       elements: {},
       _userScrolledUp: false,
+      _previouslyFocusedEl: null,
+      _toastTimer: null,
 
       cacheElements() {
         this.elements = {
           html: document.documentElement,
+          metaThemeColor: document.getElementById('metaThemeColor'),
+          srLiveStatus: document.getElementById('srLiveStatus'),
           // Theme
           themeToggleBtn: document.getElementById('themeToggleBtn'),
           themeIconDark: document.getElementById('themeIconDark'),
@@ -3373,6 +3571,7 @@
           keyAlert: document.getElementById('keyAlert'),
           // Panels & Drawers
           mobileSidebarToggle: document.getElementById('mobileSidebarToggle'),
+          closeSidebarBtn: document.getElementById('closeSidebarBtn'),
           leftSidebar: document.getElementById('leftSidebar'),
           toggleSettingsBtn: document.getElementById('toggleSettingsBtn'),
           closeSettingsBtn: document.getElementById('closeSettingsBtn'),
@@ -3399,6 +3598,7 @@
           chatStopContainer: document.getElementById('chatStopContainer'),
           stopGenBtn: document.getElementById('stopGenBtn'),
           toast: document.getElementById('toast'),
+          toastIcon: document.getElementById('toastIcon'),
           toastMessage: document.getElementById('toastMessage'),
           // Settings Controls
           presetSelect: document.getElementById('presetSelect'),
@@ -3449,23 +3649,23 @@
           try {
             highlighted = language ? hljs.highlight(code, { language }).value : hljs.highlightAuto(code).value;
           } catch (_) {
-            highlighted = DOMPurify.sanitize(code);
+            highlighted = escapeHtml(code);
           }
           const displayLang = language || (lang ? lang.toLowerCase() : 'code');
 
           return `
             <div class="code-block-wrapper">
               <div class="code-block-header">
-                <span class="code-block-lang">${displayLang}</span>
-                <button type="button" class="code-copy-btn" title="Copy code">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <span class="code-block-lang">${escapeHtml(displayLang)}</span>
+                <button type="button" class="code-copy-btn" title="Copy code" aria-label="Copy code block">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                   </svg>
                   <span class="copy-text">Copy</span>
                 </button>
               </div>
-              <pre><code class="hljs ${language}">${highlighted}</code></pre>
+              <pre><code class="hljs ${escapeHtml(language)}">${highlighted}</code></pre>
             </div>
           `;
         };
@@ -3509,9 +3709,17 @@
         if (theme === 'light') {
           this.elements.themeIconDark.style.display = 'none';
           this.elements.themeIconLight.style.display = 'block';
+          this.elements.themeToggleBtn.setAttribute('aria-label', 'Switch to dark theme');
+          if (this.elements.metaThemeColor) {
+            this.elements.metaThemeColor.setAttribute('content', '#ffffff');
+          }
         } else {
           this.elements.themeIconDark.style.display = 'block';
           this.elements.themeIconLight.style.display = 'none';
+          this.elements.themeToggleBtn.setAttribute('aria-label', 'Switch to light theme');
+          if (this.elements.metaThemeColor) {
+            this.elements.metaThemeColor.setAttribute('content', '#090d16');
+          }
         }
       },
 
@@ -3519,6 +3727,13 @@
         const newTheme = state.theme === 'dark' ? 'light' : 'dark';
         this.applyTheme(newTheme);
         storage.saveTheme(newTheme);
+        this.showToast(`Switched to ${newTheme} mode.`);
+      },
+
+      announceStatus(message) {
+        if (this.elements.srLiveStatus) {
+          this.elements.srLiveStatus.textContent = message;
+        }
       },
 
       updateKeyStatus(isValid) {
@@ -3539,17 +3754,52 @@
         this.updateSendButtonState();
       },
 
+      // Focus Trap in Modal
       openModal() {
+        this._previouslyFocusedEl = document.activeElement;
         state.isKeyModalOpen = true;
         this.clearModalAlert();
         this.elements.apiKeyModal.classList.add('open');
-        this.elements.apiKeyInput.focus();
+        this.elements.apiKeyModal.setAttribute('aria-hidden', 'false');
+        setTimeout(() => {
+          this.elements.apiKeyInput.focus();
+        }, 50);
       },
 
       closeModal() {
         state.isKeyModalOpen = false;
         this.elements.apiKeyModal.classList.remove('open');
+        this.elements.apiKeyModal.setAttribute('aria-hidden', 'true');
         this.clearModalAlert();
+        if (this._previouslyFocusedEl && typeof this._previouslyFocusedEl.focus === 'function') {
+          this._previouslyFocusedEl.focus();
+        }
+      },
+
+      handleModalKeyDown(e) {
+        if (!state.isKeyModalOpen) return;
+
+        if (e.key === 'Tab') {
+          const focusable = this.elements.apiKeyModal.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusable.length === 0) return;
+
+          const firstEl = focusable[0];
+          const lastEl = focusable[focusable.length - 1];
+
+          if (e.shiftKey) {
+            if (document.activeElement === firstEl) {
+              e.preventDefault();
+              lastEl.focus();
+            }
+          } else {
+            if (document.activeElement === lastEl) {
+              e.preventDefault();
+              firstEl.focus();
+            }
+          }
+        }
       },
 
       togglePasswordVisibility() {
@@ -3565,6 +3815,7 @@
         alertEl.className = `alert-box ${type}`;
         alertEl.textContent = message;
         alertEl.style.display = 'flex';
+        this.announceStatus(message);
       },
 
       clearModalAlert() {
@@ -3579,14 +3830,16 @@
         this.elements.validateBtnText.textContent = isLoading ? 'Validating...' : 'Validate & Save';
       },
 
-      showToast(message) {
+      showToast(message, type = 'info') {
         const toast = this.elements.toast;
         this.elements.toastMessage.textContent = message;
+        this.elements.toastIcon.textContent = type === 'error' ? '✕' : '✓';
         toast.classList.add('show');
+        this.announceStatus(message);
         clearTimeout(this._toastTimer);
         this._toastTimer = setTimeout(() => {
           toast.classList.remove('show');
-        }, 3000);
+        }, 3200);
       },
 
       updateSessionTokensBadge() {
@@ -3598,6 +3851,7 @@
         const isOpen = typeof open === 'boolean' ? open : !state.isSidebarOpen;
         state.isSidebarOpen = isOpen;
         this.elements.leftSidebar.classList.toggle('open', isOpen);
+        this.elements.mobileSidebarToggle.setAttribute('aria-expanded', String(isOpen));
         this.updateDrawerBackdrop();
       },
 
@@ -3607,9 +3861,11 @@
           const isOpen = typeof open === 'boolean' ? open : !state.isSettingsOpen;
           state.isSettingsOpen = isOpen;
           this.elements.rightSettings.classList.toggle('open', isOpen);
+          this.elements.toggleSettingsBtn.setAttribute('aria-expanded', String(isOpen));
           this.updateDrawerBackdrop();
         } else {
-          this.elements.rightSettings.classList.toggle('collapsed');
+          const isCollapsed = this.elements.rightSettings.classList.toggle('collapsed');
+          this.elements.toggleSettingsBtn.setAttribute('aria-expanded', String(!isCollapsed));
         }
       },
 
@@ -3618,6 +3874,8 @@
         state.isSettingsOpen = false;
         this.elements.leftSidebar.classList.remove('open');
         this.elements.rightSettings.classList.remove('open');
+        this.elements.mobileSidebarToggle.setAttribute('aria-expanded', 'false');
+        this.elements.toggleSettingsBtn.setAttribute('aria-expanded', 'false');
         this.closeModelDropdown();
         this.closeExportMenu();
         this.updateDrawerBackdrop();
@@ -3694,23 +3952,26 @@
           const isActive = conv.id === state.activeConversationId;
           item.className = `chat-item ${isActive ? 'active' : ''}`;
           item.setAttribute('data-id', conv.id);
+          item.setAttribute('role', 'button');
+          item.setAttribute('tabindex', '0');
+          item.setAttribute('aria-label', `Conversation: ${conv.title || 'New Chat'}${isActive ? ', currently active' : ''}`);
 
           item.innerHTML = `
             <div class="chat-item-main">
-              <svg class="chat-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg class="chat-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
               </svg>
-              <span class="chat-item-title">${DOMPurify.sanitize(conv.title || 'New Chat')}</span>
+              <span class="chat-item-title">${escapeHtml(conv.title || 'New Chat')}</span>
             </div>
             <div class="chat-item-actions">
-              <button type="button" class="chat-item-btn rename-btn" title="Rename conversation">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <button type="button" class="chat-item-btn rename-btn" title="Rename conversation" aria-label="Rename conversation ${escapeHtml(conv.title || '')}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path d="M12 20h9"></path>
                   <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
                 </svg>
               </button>
-              <button type="button" class="chat-item-btn delete delete-btn" title="Delete conversation">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <button type="button" class="chat-item-btn delete delete-btn" title="Delete conversation" aria-label="Delete conversation ${escapeHtml(conv.title || '')}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                 </svg>
@@ -3718,11 +3979,19 @@
             </div>
           `;
 
-          // Switch conversation
-          item.addEventListener('click', (e) => {
+          // Switch conversation on click or Enter
+          const switchHandler = (e) => {
             if (e.target.closest('.chat-item-btn')) return;
             this.switchConversation(conv.id);
             if (window.innerWidth <= 1024) this.toggleMobileSidebar(false);
+          };
+
+          item.addEventListener('click', switchHandler);
+          item.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              switchHandler(e);
+            }
           });
 
           // Rename action
@@ -3754,6 +4023,7 @@
         state.conversations.unshift(newConv);
         storage.saveConversations(state.conversations);
         this.switchConversation(newConv.id);
+        this.showToast('Started new chat.');
       },
 
       switchConversation(convId) {
@@ -3815,16 +4085,16 @@
         }
       },
 
-      // Auto-title conversation from first user prompt
+      // Auto-title conversation from first user prompt (sanitizes newlines and spaces)
       autoTitleActiveConversation(userText) {
         const active = this.getActiveConversation();
         if (!active) return;
         if (active.title === 'New Chat' || !active.title) {
-          const trimmed = userText.trim();
-          const cleanTitle = trimmed.length > 38 ? trimmed.slice(0, 38).trim() + '...' : trimmed;
-          active.title = cleanTitle;
+          const singleLine = userText.replace(/\s+/g, ' ').trim();
+          const cleanTitle = singleLine.length > 38 ? singleLine.slice(0, 38).trim() + '...' : singleLine;
+          active.title = cleanTitle || 'Chat';
           storage.saveConversations(state.conversations);
-          this.elements.chatHeaderTitle.textContent = cleanTitle;
+          this.elements.chatHeaderTitle.textContent = active.title;
           this.renderConversationList();
         }
       },
@@ -3860,6 +4130,7 @@
 
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
+        avatar.setAttribute('aria-hidden', 'true');
         if (msg.role === 'user') {
           avatar.innerHTML = `
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3902,11 +4173,11 @@
           const metricsBar = document.createElement('div');
           metricsBar.className = 'metrics-bar';
           metricsBar.innerHTML = `
-            <span class="metric-tag" title="Prompt Tokens">📥 ${m.promptTokens} prompt</span>
-            <span class="metric-tag" title="Completion Tokens">📤 ${m.completionTokens} completion</span>
-            <span class="metric-tag" title="Total Tokens">⚡ ${m.totalTokens} total</span>
+            <span class="metric-tag" title="Prompt Tokens">📥 ${escapeHtml(String(m.promptTokens))} prompt</span>
+            <span class="metric-tag" title="Completion Tokens">📤 ${escapeHtml(String(m.completionTokens))} completion</span>
+            <span class="metric-tag" title="Total Tokens">⚡ ${escapeHtml(String(m.totalTokens))} total</span>
             <span class="metric-tag" title="Response Latency">⏱ ${formatDuration(m.durationMs)}</span>
-            <span class="metric-tag speed" title="Generation Speed">🚀 ${m.tokensPerSec} t/s</span>
+            <span class="metric-tag speed" title="Generation Speed">🚀 ${escapeHtml(String(m.tokensPerSec))} t/s</span>
           `;
           footerRow.appendChild(metricsBar);
         }
@@ -3917,16 +4188,16 @@
 
         if (msg.role === 'user') {
           actionsGroup.innerHTML = `
-            <button type="button" class="msg-action-btn copy-msg-btn" title="Copy prompt">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <button type="button" class="msg-action-btn copy-msg-btn" title="Copy prompt" aria-label="Copy prompt">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               <span>Copy</span>
             </button>
-            <button type="button" class="msg-action-btn edit-msg-btn" title="Edit & resend prompt">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            <button type="button" class="msg-action-btn edit-msg-btn" title="Edit & resend prompt" aria-label="Edit and resend prompt">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
               <span>Edit</span>
             </button>
-            <button type="button" class="msg-action-btn delete-btn delete-msg-btn" title="Delete message">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            <button type="button" class="msg-action-btn delete-btn delete-msg-btn" title="Delete message" aria-label="Delete message">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           `;
 
@@ -3944,22 +4215,22 @@
           });
         } else {
           actionsGroup.innerHTML = `
-            <button type="button" class="msg-action-btn copy-msg-btn" title="Copy raw markdown">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <button type="button" class="msg-action-btn copy-msg-btn" title="Copy raw markdown" aria-label="Copy assistant markdown response">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               <span>Copy</span>
             </button>
-            <button type="button" class="msg-action-btn regen-msg-btn" title="Regenerate this response">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
+            <button type="button" class="msg-action-btn regen-msg-btn" title="Regenerate this response" aria-label="Regenerate this response">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
               <span>Regenerate</span>
             </button>
-            <button type="button" class="msg-action-btn delete-btn delete-msg-btn" title="Delete message">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            <button type="button" class="msg-action-btn delete-btn delete-msg-btn" title="Delete message" aria-label="Delete message">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           `;
 
           actionsGroup.querySelector('.copy-msg-btn').addEventListener('click', () => {
             navigator.clipboard.writeText(msg.content);
-            this.showToast('Assistant markdown copied.');
+            this.showToast('Assistant response copied.');
           });
 
           actionsGroup.querySelector('.regen-msg-btn').addEventListener('click', () => {
@@ -3997,7 +4268,7 @@
 
           rawDetails.innerHTML = `
             <summary class="raw-panel-summary">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
               <span>View Raw Request &amp; Response (API Key Redacted)</span>
             </summary>
             <div class="raw-panel-body">
@@ -4006,14 +4277,14 @@
                   <span>POST /openai/v1/chat/completions</span>
                   <button type="button" class="code-copy-btn copy-raw-req-btn">Copy Request</button>
                 </div>
-                <pre><code>${DOMPurify.sanitize(JSON.stringify(safeRequest, null, 2))}</code></pre>
+                <pre><code>${escapeHtml(JSON.stringify(safeRequest, null, 2))}</code></pre>
               </div>
               <div class="raw-section">
                 <div class="raw-section-header">
                   <span>Response Data &amp; Usage</span>
                   <button type="button" class="code-copy-btn copy-raw-res-btn">Copy Response</button>
                 </div>
-                <pre><code>${DOMPurify.sanitize(JSON.stringify(safeResponse, null, 2))}</code></pre>
+                <pre><code>${escapeHtml(JSON.stringify(safeResponse, null, 2))}</code></pre>
               </div>
             </div>
           `;
@@ -4042,7 +4313,6 @@
         const msg = state.messages[index];
         if (!msg || msg.role !== 'user') return;
 
-        // Truncate conversation to this message
         state.messages = state.messages.slice(0, index);
         const active = this.getActiveConversation();
         if (active) {
@@ -4055,16 +4325,14 @@
         this.adjustTextareaHeight();
         this.elements.messageInput.focus();
         this.updateSendButtonState();
-        this.showToast('Message loaded into input. Edit and send.');
+        this.showToast('Message loaded into input.');
       },
 
       regenerateMessage(index) {
         if (state.isGenerating) return;
-        // Preceding user message
         const prevUserMsg = state.messages[index - 1];
         if (!prevUserMsg || prevUserMsg.role !== 'user') return;
 
-        // Truncate up to the user message
         state.messages = state.messages.slice(0, index);
         const active = this.getActiveConversation();
         if (active) {
@@ -4094,11 +4362,13 @@
       toggleExportMenu() {
         state.isExportMenuOpen = !state.isExportMenuOpen;
         this.elements.exportMenu.style.display = state.isExportMenuOpen ? 'flex' : 'none';
+        this.elements.exportDropdownBtn.setAttribute('aria-expanded', String(state.isExportMenuOpen));
       },
 
       closeExportMenu() {
         state.isExportMenuOpen = false;
         this.elements.exportMenu.style.display = 'none';
+        this.elements.exportDropdownBtn.setAttribute('aria-expanded', 'false');
       },
 
       exportChatMarkdown() {
@@ -4170,6 +4440,20 @@
       // ========================================================================
       // SETTINGS PANEL & MODEL SELECTOR IMPLEMENTATION
       // ========================================================================
+      showModelListSkeletons() {
+        const container = this.elements.modelListContainer;
+        container.innerHTML = '';
+        for (let i = 0; i < 4; i++) {
+          const skel = document.createElement('div');
+          skel.className = 'model-skeleton-item';
+          skel.innerHTML = `
+            <div class="skeleton-line title"></div>
+            <div class="skeleton-line sub"></div>
+          `;
+          container.appendChild(skel);
+        }
+      },
+
       populateModelList(filterQuery = '') {
         const container = this.elements.modelListContainer;
         container.innerHTML = '';
@@ -4186,7 +4470,7 @@
           noMatch.style.fontSize = '12px';
           noMatch.style.color = 'var(--text-muted)';
           noMatch.style.textAlign = 'center';
-          noMatch.textContent = 'No matching models found';
+          noMatch.textContent = 'No matching chat models found';
           container.appendChild(noMatch);
           return;
         }
@@ -4196,27 +4480,38 @@
           const isSelected = m.id === state.settings.model;
           item.className = `model-list-item ${isSelected ? 'selected' : ''}`;
           item.setAttribute('data-id', m.id);
+          item.setAttribute('role', 'option');
+          item.setAttribute('aria-selected', String(isSelected));
+          item.setAttribute('tabindex', '0');
 
           const ctxStr = formatContextWindow(m.context_window);
 
           item.innerHTML = `
             <div>
-              <div class="model-item-title">${m.id}</div>
+              <div class="model-item-title">${escapeHtml(m.id)}</div>
               <div class="model-item-sub">
-                <span>${m.owned_by || 'Groq'}</span>
-                ${ctxStr ? `<span>• ${ctxStr} context</span>` : ''}
+                <span>${escapeHtml(m.owned_by || 'Groq')}</span>
+                ${ctxStr ? `<span>• ${escapeHtml(ctxStr)} context</span>` : ''}
               </div>
             </div>
             ${isSelected ? `
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent);" aria-hidden="true">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
             ` : ''}
           `;
 
-          item.addEventListener('click', () => {
+          const selectHandler = () => {
             this.selectModel(m.id);
             this.closeModelDropdown();
+          };
+
+          item.addEventListener('click', selectHandler);
+          item.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              selectHandler();
+            }
           });
 
           container.appendChild(item);
@@ -4443,6 +4738,7 @@
 
         state.isGenerating = true;
         this.updateSendButtonState();
+        this.announceStatus('Generating response...');
         state.abortController = new AbortController();
 
         try {
@@ -4513,8 +4809,8 @@
               activeConv.updatedAt = Date.now();
               storage.saveConversations(state.conversations);
 
-              // Re-render message list with attached metrics and actions
               this.renderAllMessages();
+              this.announceStatus('Response completed.');
             }
           } else {
             // Non-streaming mode
@@ -4570,6 +4866,7 @@
               storage.saveConversations(state.conversations);
 
               this.renderAllMessages();
+              this.announceStatus('Response completed.');
             }
           }
         } catch (err) {
@@ -4587,6 +4884,7 @@
               storage.saveConversations(state.conversations);
             }
             this.renderStoppedNotice(assistantPlaceholder.bubbleWrapper);
+            this.announceStatus('Generation stopped.');
           } else {
             this.renderInlineError(
               assistantPlaceholder.bubbleWrapper,
@@ -4610,6 +4908,7 @@
         
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
+        avatar.setAttribute('aria-hidden', 'true');
         avatar.innerHTML = `
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
@@ -4624,6 +4923,7 @@
 
         const typingIndicator = document.createElement('div');
         typingIndicator.className = 'typing-indicator';
+        typingIndicator.setAttribute('aria-label', 'Thinking');
         typingIndicator.innerHTML = `
           <span class="typing-dot"></span>
           <span class="typing-dot"></span>
@@ -4701,20 +5001,21 @@
 
         const errorCard = document.createElement('div');
         errorCard.className = 'inline-error-card';
+        errorCard.setAttribute('role', 'alert');
         errorCard.innerHTML = `
           <div class="inline-error-header">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <circle cx="12" cy="12" r="10"></circle>
               <line x1="12" y1="8" x2="12" y2="12"></line>
               <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
-            <span>${DOMPurify.sanitize(title)}</span>
+            <span>${escapeHtml(title)}</span>
           </div>
-          <p class="inline-error-message">${DOMPurify.sanitize(friendlyMsg)}</p>
+          <p class="inline-error-message">${escapeHtml(friendlyMsg)}</p>
           <div class="inline-error-actions">
             ${canRetry ? `
               <button type="button" class="btn-retry retry-btn-action">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <polyline points="1 4 1 10 7 10"></polyline>
                   <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
                 </svg>
@@ -4760,7 +5061,7 @@
         const notice = document.createElement('div');
         notice.className = 'generation-stopped-notice';
         notice.innerHTML = `
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
           </svg>
           <span>Generation stopped</span>
@@ -4819,6 +5120,11 @@
           if (e.target === this.elements.apiKeyModal) {
             this.closeModal();
           }
+        });
+
+        // Focus trap inside API Modal
+        this.elements.apiKeyModal.addEventListener('keydown', (e) => {
+          this.handleModalKeyDown(e);
         });
 
         // Toggle Key Visibility
@@ -4917,6 +5223,7 @@
                 const origText = textSpan ? textSpan.textContent : 'Copy';
                 if (textSpan) textSpan.textContent = 'Copied!';
                 copyBtn.classList.add('copied');
+                this.showToast('Code block copied.');
                 setTimeout(() => {
                   if (textSpan) textSpan.textContent = origText;
                   copyBtn.classList.remove('copied');
@@ -4928,8 +5235,9 @@
           }
         });
 
-        // Settings Drawers
+        // Settings Drawers & Mobile Toggles
         this.elements.mobileSidebarToggle.addEventListener('click', () => this.toggleMobileSidebar());
+        this.elements.closeSidebarBtn.addEventListener('click', () => this.toggleMobileSidebar(false));
         this.elements.toggleSettingsBtn.addEventListener('click', () => this.toggleSettingsPanel());
         this.elements.closeSettingsBtn.addEventListener('click', () => this.toggleSettingsPanel(false));
         this.elements.drawerBackdrop.addEventListener('click', () => this.closeAllDrawers());
@@ -4947,6 +5255,7 @@
 
         // Refresh Models Button
         this.elements.refreshModelsBtn.addEventListener('click', async () => {
+          this.showModelListSkeletons();
           this.showToast('Refreshing models list from Groq API...');
           const res = await api.fetchModels();
           if (res.success) {
@@ -4955,6 +5264,7 @@
             this.selectModel(state.settings.model);
             this.showToast(`Fetched ${res.models.length} chat models from Groq.`);
           } else {
+            this.populateModelList(this.elements.modelSearchInput.value);
             this.showToast('Could not fetch models. Using default model list.');
           }
         });
@@ -5204,12 +5514,15 @@
         ui.elements.apiKeyInput.value = stored.key;
         ui.updateKeyStatus(true);
 
-        // Fetch live chat models
+        // Fetch live chat models with loading skeleton
+        ui.showModelListSkeletons();
         api.fetchModels().then(mRes => {
           if (mRes.success) {
             state.availableModels = mRes.models;
             ui.populateModelList('');
             ui.selectModel(state.settings.model || DEFAULT_MODEL);
+          } else {
+            ui.populateModelList('');
           }
         });
       } else {
